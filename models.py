@@ -54,7 +54,11 @@ class Generator(nn.Module):
         self.n_dense_blocks = n_dense_blocks
         self.upsample = upsample
 
+<<<<<<< HEAD
         self.conv1 = nn.Conv2d(3, 64, 9, stride=1, padding=4)
+=======
+        self.conv1 = nn.Conv2d(3, 64, 9, stride=1, padding=1)
+>>>>>>> f89fcb753dfbbf8c29f7de9eca197a775278d5bf
 
         inchannels = 64
         for i in range(self.n_dense_blocks):
@@ -71,6 +75,7 @@ class Generator(nn.Module):
             in_channels = out_channels
             out_channels = out_channels/2
 
+<<<<<<< HEAD
         self.conv3 = nn.Conv2d(in_channels, 3, 5, stride=1, padding=2)
 
     def forward(self, x):
@@ -89,6 +94,21 @@ class Generator(nn.Module):
             x = self.__getattr__('upsample' + str(i+1))(x)
             # print(x.size())
         # print(self.conv3(x).size())
+=======
+        self.conv3 = nn.Conv2d(in_channels, 3, 9, stride=1, padding=1)
+
+    def forward(self, x):
+        x = self.conv1(x)
+
+        for i in range(self.n_dense_blocks):
+            x = self.__getattr__('denseNet' + str(i+1))(x)
+
+        x = F.elu(self.conv2_bn(self.conv2(x)))
+
+        for i in range(self.upsample):
+            x = self.__getattr__('upsample' + str(i+1))(x)
+
+>>>>>>> f89fcb753dfbbf8c29f7de9eca197a775278d5bf
         return self.conv3(x)
 
 class Discriminator(nn.Module):

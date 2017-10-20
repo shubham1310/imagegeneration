@@ -97,6 +97,7 @@ ENV/
 # mkdocs documentation
 /site
 
+<<<<<<< HEAD
 check*/
 log/*
 log*
@@ -105,5 +106,7 @@ data/*
 cifar-100-python*/
 cifar-100-python/*
 
+=======
+>>>>>>> f89fcb753dfbbf8c29f7de9eca197a775278d5bf
 # mypy
 .mypy_cache/
