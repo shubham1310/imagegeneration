@@ -102,7 +102,7 @@ class Generator(nn.Module):
         for i in range(self.upsample):
             x = self.__getattr__('upsample' + str(i+1))(x)
 
-        print (self.conv3(x).size())
+        # print (self.conv3(x).size())
         return self.conv3(x)
 
 class Discriminator(nn.Module):
@@ -124,7 +124,7 @@ class Discriminator(nn.Module):
         self.conv7_bn = nn.BatchNorm2d(512)
         self.conv8 = nn.Conv2d(512, 512, 3, stride=3, padding=1)
         self.conv8_bn = nn.BatchNorm2d(512)
-        self.conv9 = nn.Conv2d(512, 512, 3, stride=3, padding=1)
+        self.conv9 = nn.Conv2d(512, 512, 3, stride=4, padding=0)
         self.conv9_bn = nn.BatchNorm2d(512)
 
         self.fc1 = nn.Linear(2048, 1024)

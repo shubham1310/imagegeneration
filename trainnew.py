@@ -61,8 +61,6 @@ scale = transforms.Compose([transforms.ToPILImage(),
                             ])
 
 
-
-
 backtrans= transforms.Compose([transforms.Normalize(mean = [-2.118, -2.036, -1.804], #Equivalent to un-normalizing ImageNet (for correct visualization)
                             std = [4.367, 4.464, 4.444]),
                             transforms.ToPILImage(),
@@ -120,7 +118,7 @@ visualizer = Visualizer()
 
 inputsG = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
 
-inputsGreal = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
+inputsGreal = torch.FloatTensor(opt.batchSize, 3, opt.imageSize*opt.upSampling, opt.imageSize*opt.upSampling)
 
 # Pre-train generator
 print 'Generator pre-training'
@@ -191,6 +189,8 @@ for epoch in range(opt.nEpochs):
         # Downsample images to low resolution
         for j in range(opt.batchSize):
             inputsG[j] = scale(inputs[j])
+            # print(inputs[j].size())
+            # print 'uu'
             inputs[j] = normalize(inputs[j])
 
 
@@ -214,20 +214,24 @@ for epoch in range(opt.nEpochs):
                 if not(int(inputsreal.size()[0]) == opt.batchSize):
                     continue
                 for k in range(opt.batchSize):
-                    inputsGreal[k] = scale(inputsreal[k])
+                    # print (inputsreal[k].size())
+                    inputsGreal[k] = normalize(inputsreal[k])
 
                 if opt.cuda:
                     inputsDreal = Variable(inputsGreal.cuda())
                 else:
                     inputsDreal = Variable(inputsGreal)
 
+                # print(inputsDreal.size())
                 outputs = netD(inputsDreal)
                 D_real = outputs.data.mean()
 
                 lossD_real = adversarial_criterion(outputs, target_real)
                 lossD_real.backward()
+                break
+            
 
-
+        # print (inputsD_real.size())
         # With fake data
 
         outputs = netD(inputsD_real)
