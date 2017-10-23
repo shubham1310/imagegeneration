@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Implements SRGAN models: https://arxiv.org/abs/1609.04802
-
 TODO:
     * Try to make this work with SELU
 """
@@ -54,7 +53,7 @@ class Generator(nn.Module):
         self.n_dense_blocks = n_dense_blocks
         self.upsample = upsample
 
-        self.conv1 = nn.Conv2d(3, 64, 9, stride=1, padding=4)
+        self.conv1 = nn.Conv2d(3, 64, 9, stride=1, padding=1)
 
         inchannels = 64
         for i in range(self.n_dense_blocks):
@@ -71,24 +70,6 @@ class Generator(nn.Module):
             in_channels = out_channels
             out_channels = out_channels/2
 
-        self.conv3 = nn.Conv2d(in_channels, 3, 5, stride=1, padding=2)
-
-    def forward(self, x):
-        # print('forward')
-        # print(x.size())
-        x = self.conv1(x)
-        # print(x.size())
-        for i in range(self.n_dense_blocks):
-            x = self.__getattr__('denseNet' + str(i+1))(x)
-            # print(x.size())
-
-        x = F.elu(self.conv2_bn(self.conv2(x)))
-        # print(x.size())
-
-        for i in range(self.upsample):
-            x = self.__getattr__('upsample' + str(i+1))(x)
-            # print(x.size())
-        # print(self.conv3(x).size())
         self.conv3 = nn.Conv2d(in_channels, 3, 9, stride=1, padding=1)
 
     def forward(self, x):
@@ -102,7 +83,6 @@ class Generator(nn.Module):
         for i in range(self.upsample):
             x = self.__getattr__('upsample' + str(i+1))(x)
 
-        print (self.conv3(x).size())
         return self.conv3(x)
 
 class Discriminator(nn.Module):
@@ -122,10 +102,8 @@ class Discriminator(nn.Module):
         self.conv6_bn = nn.BatchNorm2d(256)
         self.conv7 = nn.Conv2d(256, 512, 3, stride=1, padding=1)
         self.conv7_bn = nn.BatchNorm2d(512)
-        self.conv8 = nn.Conv2d(512, 512, 3, stride=3, padding=1)
+        self.conv8 = nn.Conv2d(512, 512, 3, stride=2, padding=1)
         self.conv8_bn = nn.BatchNorm2d(512)
-        self.conv9 = nn.Conv2d(512, 512, 3, stride=3, padding=1)
-        self.conv9_bn = nn.BatchNorm2d(512)
 
         self.fc1 = nn.Linear(2048, 1024)
         self.fc2 = nn.Linear(1024, 1)
@@ -140,12 +118,13 @@ class Discriminator(nn.Module):
         x = F.elu(self.conv6_bn(self.conv6(x)))
         x = F.elu(self.conv7_bn(self.conv7(x)))
         x = F.elu(self.conv8_bn(self.conv8(x)))
-        x = F.elu(self.conv9_bn(self.conv9(x)))
-        # print(x.size())
+
         # Flatten
+        print(x.size())
         x = x.view(x.size(0), -1)
-        # print(x.size())
-        # print(self.fc1(x).size())
+        print(x.size())
         x = F.elu(self.fc1(x))
-        # print('uwuw')
+        print(x.size())
+        while 1:
+            pass
         return F.sigmoid(self.fc2(x))

@@ -114,7 +114,7 @@ if opt.cuda:
 optimG = optim.Adam(netG.parameters(), lr=opt.lrG)
 optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
 
-configure('logs/' + '-' + str(opt.batchSize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
+configure('logs/' + 'genimage-' + str(opt.batchSize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
 visualizer = Visualizer()
 
 inputsG = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
@@ -126,6 +126,9 @@ for epoch in range(50):
         # Generate data
         inputs, _ = data
 
+        # print(int(inputs.size()[0]) )
+        if not(int(inputs.size()[0]) == opt.batchSize):
+            continue
         # print(inputs.size())
         # Downsample images to low resolution
         for j in range(opt.batchSize):
