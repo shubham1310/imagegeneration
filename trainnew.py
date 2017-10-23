@@ -258,7 +258,8 @@ for epoch in range(opt.nEpochs):
         lossG_content = content_criterion(fake_features, real_features)
         lossG_adversarial = adversarial_criterion(netD(inputsD_fake).detach(), target_real)
 
-        lossG_total = 0.006*lossG_content + 1e-3*lossG_adversarial
+        # lossG_total = 0.006*lossG_content + 1e-3*lossG_adversarial # initial loss
+        lossG_total = 0.000*lossG_content + lossG_adversarial
         lossG_total.backward()
 
         # Update generator weights
