@@ -76,7 +76,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize,
                                          shuffle=True, num_workers=int(opt.workers))
 
 
-dataloaderreal = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize,
+dataloaderreal = torch.utils.data.DataLoader(datasetreal, batch_size=opt.batchSize,
                                          shuffle=True, num_workers=int(opt.workers))
 
 netG = Generator(3, opt.upSampling-1) #6
@@ -113,7 +113,7 @@ if opt.cuda:
 optimG = optim.Adam(netG.parameters(), lr=opt.lrG)
 optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
 
-configure('logs/' + 'genimage-' + str(opt.batchSize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
+configure('logs/' + 'genimage-' + str(opt.out) + str(opt.batchSize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
 visualizer = Visualizer()
 
 inputsG = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
@@ -234,7 +234,7 @@ for epoch in range(opt.nEpochs):
         # print (inputsD_real.size())
         # With fake data
 
-        outputs = netD(inputsD_real)
+        outputs = netD(inputsD_real.detach())
         D_real = outputs.data.mean()
 
         lossD_real = adversarial_criterion(outputs, target_fake)
@@ -269,7 +269,8 @@ for epoch in range(opt.nEpochs):
             print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G (Content/Advers): %.4f/%.4f D(x): %.4f D(G(z)): %.4f'
                   % (epoch, opt.nEpochs, i, len(dataloader),
                      (lossD_real + lossD_fake).data[0], lossG_content.data[0], lossG_adversarial.data[0], D_real, D_fake,))
-            visualizer.show(inputsG, inputsD_real.cpu().data, inputsD_fake.cpu().data)
+        # if i%5==0:
+        # visualizer.show(inputsG, inputsDreal.cpu().data, inputsD_fake.cpu().data)
 
     log_value('G_content_loss', lossG_content.data[0], epoch)
     log_value('G_advers_loss', lossG_adversarial.data[0], epoch)

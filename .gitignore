@@ -104,7 +104,8 @@ data*
 data/*
 cifar-100-python*/
 cifar-100-python/*
-
+review/*
+retrain/*
 
 # mypy
 .mypy_cache/
