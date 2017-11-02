@@ -106,6 +106,9 @@ cifar-100-python*/
 cifar-100-python/*
 review/*
 retrain/*
+re*
+re*/*
+
 
 # mypy
 .mypy_cache/

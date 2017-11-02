@@ -17,7 +17,7 @@ import torchvision.transforms as transforms
 from tensorboard_logger import configure, log_value
 
 from models import Generator, Discriminator, FeatureExtractor
-from utils import Visualizer
+from utilsnew import Visualizer2
 
 parser = argparse.ArgumentParser()
 # parser.add_argument('--dataset', type=str, default='cifar100', help='cifar10 | cifar100 | folder')
@@ -114,7 +114,7 @@ optimG = optim.Adam(netG.parameters(), lr=opt.lrG)
 optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
 
 configure('logs/' + 'genimage-' + str(opt.out) + str(opt.batchSize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
-visualizer = Visualizer()
+visualizer = Visualizer2()
 
 inputsG = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
 
@@ -163,10 +163,10 @@ for epoch in range(opt.gEpochs):
         # Update generator weights
         optimG.step()
 
-        if i%5==0:
+        if i%50==0:
             # Status and display
             print('[%d/%d][%d/%d] Loss_G: %.4f'
-                  % (epoch, opt.gEpochs, i, len(dataloader), lossG_content.data[0],))
+                  % (epoch, 50, i, len(dataloader), lossG_content.data[0],))
                 # imgplot = plt.imshow(backtrans(inputs[0]))
                 # imgplot = plt.imshow(backtrans(inputsD_real.cpu().data[0]))
                 # imgplot = plt.imshow(backtrans(inputsD_fake.cpu().data[0]))
@@ -176,7 +176,7 @@ for epoch in range(opt.gEpochs):
     log_value('G_pixel_loss', lossG_content.data[0], epoch)
     torch.save(netG.state_dict(), '%s/netG_pretrain_%d.pth' % (opt.out, epoch))
 
-
+count=0
 print 'Adversarial training'
 for epoch in range(opt.nEpochs):
     for i, data in enumerate(dataloader):
@@ -209,8 +209,6 @@ for epoch in range(opt.nEpochs):
         # outputs = netD(inputsD_real)
         # With real data
         if i%5==0:
-            los=0
-            realdatacount=0
             for j, realdata in enumerate(dataloaderreal):
                 inputsreal, _ = realdata
                 if not(int(inputsreal.size()[0]) == opt.batchSize):
@@ -228,11 +226,10 @@ for epoch in range(opt.nEpochs):
                 outputs = netD(inputsDreal)
                 D_real = outputs.data.mean()
 
-                lossDreal = adversarial_criterion(outputs, target_real)
-                lossDreal.backward()
-                los+=lossDreal.data[0]
-                realdatacount+=1
-            print('[%d/%d][%d/%d] Loss_Dreal: %.4f '% (epoch, opt.nEpochs, i, len(dataloader), los*1.0/realdatacount))
+                lossD_real = adversarial_criterion(outputs, target_real)
+                lossD_real.backward()
+                break
+            
 
         # print (inputsD_real.size())
         # With fake data
@@ -274,7 +271,9 @@ for epoch in range(opt.nEpochs):
                      (lossD_real + lossD_fake).data[0], lossG_content.data[0], lossG_adversarial.data[0], D_real, D_fake,))
         # if i%5==0:
         # visualizer.show(inputsG, inputsDreal.cpu().data, inputsD_fake.cpu().data)
-    log_value('D_real_loss', lossDreal.data[0], epoch)
+        
+        count=visualizer.show(inputsG, inputsD_fake.cpu().data,count)
+
     log_value('G_content_loss', lossG_content.data[0], epoch)
     log_value('G_advers_loss', lossG_adversarial.data[0], epoch)
     log_value('D_advers_loss', (lossD_real + lossD_fake).data[0], epoch)
