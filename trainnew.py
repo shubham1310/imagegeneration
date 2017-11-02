@@ -179,6 +179,8 @@ for epoch in range(opt.gEpochs):
 
 print 'Adversarial training'
 for epoch in range(opt.nEpochs):
+    mlos=0
+    mcount=0
     for i, data in enumerate(dataloader):
         # Generate data
         inputs, _ = data
@@ -208,7 +210,8 @@ for epoch in range(opt.nEpochs):
         netD.zero_grad()
         # outputs = netD(inputsD_real)
         # With real data
-        if i%5==0:
+        
+        if i%100==0:
             los=0
             realdatacount=0
             for j, realdata in enumerate(dataloaderreal):
@@ -232,7 +235,10 @@ for epoch in range(opt.nEpochs):
                 lossDreal.backward()
                 los+=lossDreal.data[0]
                 realdatacount+=1
-            print('[%d/%d][%d/%d] Loss_Dreal: %.4f '% (epoch, opt.nEpochs, i, len(dataloader), los*1.0/realdatacount))
+            if i%100==0:
+                print('[%d/%d][%d/%d] Loss_Dreal: %.4f '% (epoch, opt.nEpochs, i, len(dataloader), los*1.0/realdatacount))
+            mlos+=los*1.0/realdatacount
+            mcount+=1
 
         # print (inputsD_real.size())
         # With fake data
@@ -259,10 +265,10 @@ for epoch in range(opt.nEpochs):
         fake_features = feature_extractor(inputsD_fake)
 
         lossG_content = content_criterion(fake_features, real_features)
-        lossG_adversarial = adversarial_criterion(netD(inputsD_fake).detach(), target_fake)
+        lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_fake)
 
         # lossG_total = 0.006*lossG_content + 1e-3*lossG_adversarial # initial loss
-        lossG_total = 0.000*lossG_content + lossG_adversarial
+        lossG_total = lossG_adversarial
         lossG_total.backward()
 
         # Update generator weights
@@ -274,7 +280,7 @@ for epoch in range(opt.nEpochs):
                      (lossD_real + lossD_fake).data[0], lossG_content.data[0], lossG_adversarial.data[0], D_real, D_fake,))
         # if i%5==0:
         # visualizer.show(inputsG, inputsDreal.cpu().data, inputsD_fake.cpu().data)
-    log_value('D_real_loss', lossDreal.data[0], epoch)
+    log_value('D_real_loss', mlos*1.0/mcount, epoch)
     log_value('G_content_loss', lossG_content.data[0], epoch)
     log_value('G_advers_loss', lossG_adversarial.data[0], epoch)
     log_value('D_advers_loss', (lossD_real + lossD_fake).data[0], epoch)
