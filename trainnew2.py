@@ -17,7 +17,7 @@ import torchvision.transforms as transforms
 from tensorboard_logger import configure, log_value
 
 from models import Generator, Discriminator, FeatureExtractor
-from utils import Visualizer
+from utilsnew import Visualizer2
 
 parser = argparse.ArgumentParser()
 # parser.add_argument('--dataset', type=str, default='cifar100', help='cifar10 | cifar100 | folder')
@@ -114,7 +114,7 @@ optimG = optim.Adam(netG.parameters(), lr=opt.lrG)
 optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
 
 configure('logs/' + 'genimage-' + str(opt.out) + str(opt.batchSize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
-visualizer = Visualizer()
+visualizer = Visualizer2()
 
 inputsG = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
 
@@ -280,8 +280,7 @@ for epoch in range(opt.nEpochs):
             print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G (Content/Advers): %.4f/%.4f D(x): %.4f D(G(z)): %.4f'
                   % (epoch, opt.nEpochs, i, len(dataloader),
                      (lossD_real + lossD_fake).data[0], lossG_content.data[0], lossG_adversarial.data[0], D_real, D_fake,))
-        # if i%5==0:
-        # visualizer.show(inputsG, inputsDreal.cpu().data, inputsD_fake.cpu().data)
+            visualizer.show(inputsG, inputsDreal.cpu().data, inputsD_fake.cpu().data)
     log_value('D_real_loss', lossDreal.data[0], epoch)
     log_value('G_content_loss', lossG_content.data[0], epoch)
     log_value('G_advers_loss', lossG_adversarial.data[0], epoch)

@@ -33,8 +33,8 @@ class Visualizer2:
         if self.step == self.show_step:
             self.step = 0
 
-            #i = random.randint(0, inputsG.size(0) -1)
-            for i in range(inputsG.size(0) -1):
+            for j in range(5):
+                i = random.randint(0, inputsG.size(0) -1)
                 lr_image = self.transform(inputsG[i])
                 #hr_image = self.transform(inputsD_real[i])
                 transformimage = self.transform(inputstrans[i])
