@@ -116,6 +116,10 @@ optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
 configure('logs/' + 'genimage-' + str(opt.out) + str(opt.batchSize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
 visualizer = Visualizer2()
 
+dire ='resultimages/' +str(opt.out) +'/'
+if not os.path.exists(dire):
+    os.makedirs(dire)
+
 inputsG = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
 
 inputsGreal = torch.FloatTensor(opt.batchSize, 3, opt.imageSize*opt.upSampling, opt.imageSize*opt.upSampling)

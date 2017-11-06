@@ -108,7 +108,8 @@ review/*
 retrain/*
 re*
 re*/*
-
+eq*
+eq*/*
 
 # mypy
 .mypy_cache/

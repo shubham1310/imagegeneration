@@ -115,6 +115,9 @@ optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
 
 configure('logs/' + 'genimage-' + str(opt.out) + str(opt.batchSize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
 visualizer = Visualizer2()
+dire ='resultimages/' +str(opt.out) +'/'
+if not os.path.exists(dire):
+    os.makedirs(dire)
 
 inputsG = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
 
@@ -136,10 +139,6 @@ for epoch in range(opt.gEpochs):
             inputsG[j] = scale(inputs[j])
             inputs[j] = normalize(inputs[j])
 
-
-
-        # print(inputsG.size())
-        # print(inputs.size())
         # Generate real and fake inputs
         if opt.cuda:
             inputsD_real = Variable(inputs.cuda())
@@ -163,7 +162,7 @@ for epoch in range(opt.gEpochs):
         # Update generator weights
         optimG.step()
 
-        if i%5==0:
+        if i%50==0:
             # Status and display
             print('[%d/%d][%d/%d] Loss_G: %.4f'
                   % (epoch, opt.gEpochs, i, len(dataloader), lossG_content.data[0],))
@@ -184,6 +183,40 @@ visualcount=0
 realdata = iter(dataloaderreal)
 for epoch in range(opt.nEpochs):
     for i, data in enumerate(dataloader):
+        ######### Train discriminator #########
+        netD.zero_grad()
+
+        # With real data`
+        # los=0
+   
+        if count==lenreal-1:
+            del realdata
+            del inputsreal
+            realdata = iter(dataloaderreal)
+        count= (count+1)%lenreal
+        inputsreal, _ = realdata.next()
+     
+        if not(int(inputsreal.size()[0]) == opt.batchSize):
+            continue
+        for k in range(opt.batchSize):
+            # print (inputsreal[k].size())
+            inputsGreal[k] = normalize(inputsreal[k])
+
+        if opt.cuda:
+            inputsDreal = Variable(inputsGreal.cuda())
+        else:
+            inputsDreal = Variable(inputsGreal)
+
+        # print(inputsDreal.size())
+        outputsre = netD(inputsDreal)
+        Dreal = outputsre.data.mean()
+        lossDreal = adversarial_criterion(outputsre, target_real)
+        # lossDreal.backward()
+        # los+=lossDreal.data[0]
+        # Update discriminator weights
+        # optimD.step()
+        # del inputsDreal
+
         # Generate data
         inputs, _ = data
 
@@ -194,10 +227,7 @@ for epoch in range(opt.nEpochs):
         for j in range(opt.batchSize):
             inputsG[j] = scale(inputs[j])
             # print(inputs[j].size())
-            # print 'uu'
             inputs[j] = normalize(inputs[j])
-
-
 
         # Generate real and fake inputs
         if opt.cuda:
@@ -206,52 +236,21 @@ for epoch in range(opt.nEpochs):
         else:
             inputsD_real = Variable(inputs)
             inputsD_fake = netG(Variable(inputsG))
+          
 
-
-        ######### Train discriminator #########
-        netD.zero_grad()
-
-        # With real data
-        if i%5==0:
-            los=0
-            
-            if count==lenreal-1:
-                realdata = iter(dataloaderreal)
-            count= (count+1)%lenreal
-            inputsreal, _ = realdata.next()
-         
-            if not(int(inputsreal.size()[0]) == opt.batchSize):
-                continue
-            for k in range(opt.batchSize):
-                # print (inputsreal[k].size())
-                inputsGreal[k] = normalize(inputsreal[k])
-
-            if opt.cuda:
-                inputsDreal = Variable(inputsGreal.cuda())
-            else:
-                inputsDreal = Variable(inputsGreal)
-
-            # print(inputsDreal.size())
-            outputs = netD(inputsDreal)
-            D_real = outputs.data.mean()
-            lossDreal = adversarial_criterion(outputs, target_real)
-            lossDreal.backward()
-            los+=lossDreal.data[0]
-
-        # print (inputsD_real.size())
         # With fake data
 
-        outputs = netD(inputsD_real.detach())
+        outputs = netD(inputsD_real)
         D_real = outputs.data.mean()
 
-        lossD_real = adversarial_criterion(outputs, target_fake)
-        lossD_real.backward()
+        # lossD_real = adversarial_criterion(outputs, target_fake)
+        # lossD_real.backward()
 
-        outputs = netD(inputsD_fake.detach()) # Don't need to compute gradients wrt weights of netG (for efficiency)
-        D_fake = outputs.data.mean()
+        outputsnew = netD(inputsD_fake.detach()) # Don't need to compute gradients wrt weights of netG (for efficiency)
+        D_fake = outputsnew.data.mean()
 
-        lossD_fake = adversarial_criterion(outputs, target_fake)
-        lossD_fake.backward()
+        lossD = adversarial_criterion(outputsnew, target_fake) + 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
+        lossD.backward()
 
         # Update discriminator weights
         optimD.step()
@@ -265,23 +264,24 @@ for epoch in range(opt.nEpochs):
         lossG_content = content_criterion(fake_features, real_features)
         lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_fake)
 
-        # lossG_total = 0.006*lossG_content + 1e-3*lossG_adversarial # initial loss
-        lossG_total = lossG_adversarial
+        lossG_total = 0.1*lossG_content + lossG_adversarial # initial loss
+        # lossG_total = lossG_adversarial
         lossG_total.backward()
 
         # Update generator weights
         optimG.step()
         if i%50==0:
             # Status and display
-            print('[%d/%d][%d/%d] Loss_Dreal: %.4f '% (epoch, opt.nEpochs, i, len(dataloader), los*1.0/2))
+            print('[%d/%d][%d/%d] Loss_Dreal: %.4f D(x): %.4f '% (epoch, opt.nEpochs, i, len(dataloader), lossDreal.data[0],Dreal))
             print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G (Content/Advers): %.4f/%.4f D(x): %.4f D(G(z)): %.4f'
                   % (epoch, opt.nEpochs, i, len(dataloader),
-                     (lossD_real + lossD_fake).data[0], lossG_content.data[0], lossG_adversarial.data[0], D_real, D_fake,))
-            visualcount = visualizer.show(inputsG, inputsDreal.cpu().data, inputsD_fake.cpu().data,visualcount)
+                     lossD.data[0], lossG_content.data[0], lossG_adversarial.data[0], D_real, D_fake,))
+        if i%200==0:
+            visualcount = visualizer.show(inputsG, inputsD_fake.cpu().data,visualcount,str(opt.out))
     log_value('D_real_loss', lossDreal.data[0], epoch)
     log_value('G_content_loss', lossG_content.data[0], epoch)
     log_value('G_advers_loss', lossG_adversarial.data[0], epoch)
-    log_value('D_advers_loss', (lossD_real + lossD_fake).data[0], epoch)
+    log_value('D_advers_loss', (lossD).data[0], epoch)
 
     # Do checkpointing
     torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.out, epoch))
