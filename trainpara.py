@@ -22,7 +22,7 @@ from utilsnew import Visualizer2
 parser = argparse.ArgumentParser()
 # parser.add_argument('--dataset', type=str, default='cifar100', help='cifar10 | cifar100 | folder')
 parser.add_argument('--dataroot', type=str, default='./data', help='path to dataset')
-parser.add_argument('--workers', type=int, default=2, help='number of data loading workers')
+parser.add_argument('--workers', type=int, default=4, help='number of data loading workers')
 parser.add_argument('--batchSize', type=int, default=16, help='input batch size')
 parser.add_argument('--imageSize', type=int, default=100, help='the low resolution image size')
 parser.add_argument('--upSampling', type=int, default=2, help='low to high resolution scaling factor')
@@ -80,17 +80,8 @@ dataloaderreal = torch.utils.data.DataLoader(datasetreal, batch_size=opt.batchSi
                                          shuffle=True, num_workers=int(opt.workers))
 
 netG = Generator(16, opt.upSampling) #6
-
-#netG.apply(weights_init)
-if opt.netG != '':
-    netG.load_state_dict(torch.load(opt.netG))
-print netG
-
 netD = Discriminator()
-#netD.apply(weights_init)
-if opt.netD != '':
-    netD.load_state_dict(torch.load(opt.netD))
-print netD
+
 
 # For the content loss
 feature_extractor = FeatureExtractor(torchvision.models.vgg19(pretrained=True))
@@ -112,6 +103,17 @@ if opt.cuda:
     adversarial_criterion.cuda()
     target_real = target_real.cuda()
     target_fake = target_fake.cuda()
+
+
+#netG.apply(weights_init)
+if opt.netG != '':
+    netG.load_state_dict(torch.load(opt.netG))
+print netG
+
+#netD.apply(weights_init)
+if opt.netD != '':
+    netD.load_state_dict(torch.load(opt.netD))
+print netD
 
 optimG = optim.Adam(netG.parameters(), lr=opt.lrG)
 optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
@@ -156,9 +158,6 @@ for epoch in range(opt.gEpochs):
 
         ######### Train generator #########
         netG.zero_grad()
-        # print(inputsD_fake.size())
-        # print(inputsD_real.size())
-
         lossG_content = content_criterion(inputsD_fake, inputsD_real)
         lossG_content.backward()
 
@@ -185,6 +184,7 @@ for epoch in range(opt.nEpochs):
     mean_generator_adversarial_loss = 0.0
     mean_generator_total_loss = 0.0
     mean_discriminator_loss = 0.0
+    mean_discriminator_realloss = 0.0
     for i, data in enumerate(dataloader):
         ######### Train discriminator #########
         netD.zero_grad()
@@ -199,7 +199,13 @@ for epoch in range(opt.nEpochs):
         inputsreal, _ = realdata.next()
      
         while not(int(inputsreal.size()[0]) == opt.batchSize):
+            if count==lenreal-1:
+                del realdata
+                del inputsreal
+                realdata = iter(dataloaderreal)
+            count= (count+1)%lenreal
             inputsreal, _ = realdata.next()
+        # print(count,lenreal)
         for k in range(opt.batchSize):
             inputsGreal[k] = normalize(inputsreal[k])
 
@@ -212,6 +218,7 @@ for epoch in range(opt.nEpochs):
         Dreal = outputsre.data.mean()
         lossDreal = adversarial_criterion(outputsre, target_real)
         # Update discriminator weights
+        mean_discriminator_realloss+=lossDreal.data[0]
 
         # Generate data
         inputs, _ = data
@@ -272,13 +279,14 @@ for epoch in range(opt.nEpochs):
         optimG.step()
         if i%50==0:
             # Status and display
-            print('[%d/%d][%d/%d] Loss_Dreal: %.4f D(x): %.4f '% (epoch, opt.nEpochs, i, len(dataloader), lossDreal.data[0],Dreal))
-            print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G (Content/Advers): %.4f/%.4f D(x): %.4f D(G(z)): %.4f'
+            print('[%d/%d][%d/%d] Loss_Dreal: %.4f Dreal(x): %.4f Loss_Dfake: %.4f'% (epoch, opt.nEpochs, i, len(dataloader), lossDreal.data[0],Dreal,lossD.data[0]-lossDreal.data[0]))
+            print('[%d/%d][%d/%d] LossDtotal: %.4f Loss_G (Content/Advers): %.4f/%.4f D(x): %.4f D(G(z)): %.4f'
                   % (epoch, opt.nEpochs, i, len(dataloader),
                      lossD.data[0], lossG_content.data[0], lossG_adversarial.data[0], D_real, D_fake,))
         if i%200==0:
             visualcount = visualizer.show(inputsG, inputsD_fake.cpu().data,visualcount,str(opt.out))
-    log_value('D_real_loss', lossDreal.data[0], epoch)
+    log_value('D_real_loss', mean_discriminator_realloss/len(dataloader), epoch)
+    log_value('D_fake_loss',(mean_discriminator_loss-mean_discriminator_realloss)/len(dataloader), epoch)
     log_value('G_content_loss', mean_generator_content_loss/len(dataloader), epoch)
     log_value('G_advers_loss', mean_generator_adversarial_loss/len(dataloader), epoch)
     log_value('generator_total_loss', mean_generator_total_loss/len(dataloader), epoch)
