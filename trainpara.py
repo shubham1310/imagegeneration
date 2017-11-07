@@ -80,6 +80,7 @@ dataloaderreal = torch.utils.data.DataLoader(datasetreal, batch_size=opt.batchSi
                                          shuffle=True, num_workers=int(opt.workers))
 
 netG = Generator(16, opt.upSampling) #6
+
 #netG.apply(weights_init)
 if opt.netG != '':
     netG.load_state_dict(torch.load(opt.netG))
@@ -103,7 +104,9 @@ target_fake = Variable(torch.zeros(opt.batchSize,1))
 # if gpu is to be used
 if opt.cuda:
     netG.cuda()
+    netG = torch.nn.DataParallel(netG)
     netD.cuda()
+    netD = torch.nn.DataParallel(netD)
     feature_extractor.cuda()
     content_criterion.cuda()
     adversarial_criterion.cuda()

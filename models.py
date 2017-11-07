@@ -74,24 +74,7 @@ class Generator(nn.Module):
         self.conv3 = nn.Conv2d(in_channels, 3, 5, stride=1, padding=2)
 
     def forward(self, x):
-        # print('forward')
-        # print(x.size())
-        x = self.conv1(x)
-        # print(x.size())
-        for i in range(self.n_dense_blocks):
-            x = self.__getattr__('denseNet' + str(i+1))(x)
-            # print(x.size())
-
-        x = F.elu(self.conv2_bn(self.conv2(x)))
-        # print(x.size())
-
-        for i in range(self.upsample):
-            x = self.__getattr__('upsample' + str(i+1))(x)
-            # print(x.size())
-        # print(self.conv3(x).size())
-        self.conv3 = nn.Conv2d(in_channels, 3, 9, stride=1, padding=1)
-
-    def forward(self, x):
+   
         x = self.conv1(x)
 
         for i in range(self.n_dense_blocks):
