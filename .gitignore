@@ -112,7 +112,7 @@ eq*
 eq*/*
 */*
 savemodelsold/*
-
+/.*
 
 # mypy
 .mypy_cache/
