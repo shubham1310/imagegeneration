@@ -110,9 +110,8 @@ re*
 re*/*
 eq*
 eq*/*
-*/*
 savemodelsold/*
-/.*
+._*
 
 # mypy
 .mypy_cache/
