@@ -112,6 +112,7 @@ eq*
 eq*/*
 savemodelsold/*
 ._*
+*.jpg
 
 # mypy
 .mypy_cache/

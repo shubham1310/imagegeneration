@@ -158,9 +158,6 @@ for epoch in range(opt.gEpochs):
             inputsGimg[j] = normalize(inputs[j][:,:siz,:])
             # torchvision.utils.save_image(inputsGmask[j],'mask' + str(count) + '.jpg')
             # print(inputsGmask[j] )
-            
-            # while 1:
-                # pass
 
         # Generate real and fake inputs
         if opt.cuda:
@@ -174,7 +171,8 @@ for epoch in range(opt.gEpochs):
 
         ######### Train generator #########
         netG.zero_grad()
-        lossG_content = content_criterion(inputsD_fake*inputmask, inputsD_real*inputmask)
+        lossG_content = content_criterion(inputsD_fake, inputsD_real)
+        # lossG_content = content_criterion(inputsD_fake*inputmask, inputsD_real*inputmask)
         lossG_content.backward()
 
         # Update generator weights
@@ -183,7 +181,7 @@ for epoch in range(opt.gEpochs):
         # Status and display
         if i%50==0:
             print('[%d/%d][%d/%d] Loss_G: %.4f'% (epoch, opt.gEpochs, i, len(dataloader), lossG_content.data[0],))
-        count= visualizer.show( inputsD_real.cpu().data, inputsD_fake.cpu().data,count,str(opt.out))
+            count= visualizer.show( inputsD_real.cpu().data, inputsD_fake.cpu().data,count,str(opt.out))
 
     log_value('G_pixel_loss', lossG_content.data[0], epoch)
     torch.save(netG.state_dict(), '%s/netG_pretrain_%d.pth' % (opt.out, epoch))
@@ -241,15 +239,17 @@ for epoch in range(opt.nEpochs):
 
         for j in range(opt.batchsize):
             inputsG[j] = scaleandnorm(inputs[j][:,:siz,:])
-            inputsGmask[j] = inputs[j][:,siz:,:]/255
-            inputs[j] = normalize(inputs[j][:,:siz,:])
+            inputsGmask[j] = (1- (inputs[j][:,siz:,:]))
+            inputsGimg[j] = normalize(inputs[j][:,:siz,:])
 
         # Generate real and fake inputs
         if opt.cuda:
-            inputsD_real = Variable(inputs.cuda())
+            inputsD_real = Variable(inputsGimg.cuda())
+            inputmask = Variable(inputsGmask.cuda())
             inputsD_fake = netG(Variable(inputsG).cuda())
         else:
-            inputsD_real = Variable(inputs)
+            inputsD_real = Variable(inputsGimg)
+            inputmask = Variable(inputsGmask)
             inputsD_fake = netG(Variable(inputsG))
 
         outputs = netD(inputsD_real)
@@ -261,10 +261,11 @@ for epoch in range(opt.nEpochs):
         outputsnew = netD(inputsD_fake.detach()) # Don't need to compute gradients wrt weights of netG (for efficiency)
         D_fake = outputsnew.data.mean()
 
-        if i%50==0:
-            lossD = adversarial_criterion(outputsnew, target_fake) + 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
-        else:
-            lossD = 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
+        lossD = adversarial_criterion(outputsnew, target_fake) + 1*(adversarial_criterion(outputs, target_fake) + lossDreal)
+        # if i%50==0:
+        #     lossD = adversarial_criterion(outputsnew, target_fake) + 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
+        # else:
+        #     lossD = 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
 
         mean_discriminator_loss+=lossD.data[0]
         lossD.backward()
@@ -275,10 +276,12 @@ for epoch in range(opt.nEpochs):
         ######### Train generator #########
         netG.zero_grad()
 
-        real_features = Variable(feature_extractor(inputsD_real).data)
-        fake_features = feature_extractor(inputsD_fake)
+        real_features = Variable(feature_extractor(inputsD_real*inputmask).data)
+        fake_features = feature_extractor(inputsD_fake*inputmask)
+
 
         lossG_content = content_criterion(fake_features, real_features)
+
         lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_fake)
         mean_generator_content_loss += lossG_content.data[0]
 
