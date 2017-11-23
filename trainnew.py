@@ -279,7 +279,7 @@ for epoch in range(opt.nEpochs):
 
         lossG_content = content_criterion(fake_features, real_features)
 
-        lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_fake)
+        lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_real)
         mean_generator_content_loss += lossG_content.data[0]
 
         lossG_total = 0.1*lossG_content + lossG_adversarial 
