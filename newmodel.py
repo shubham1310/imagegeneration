@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 def swish(x):
-    return x * F.sigmoid(x)
+    return x # * F.sigmoid(x)
 
 class FeatureExtractor(nn.Module):
     def __init__(self, cnn, feature_layer=11):
@@ -107,22 +107,73 @@ class Discriminator(nn.Module):
     def forward(self, x):
         x = swish(self.conv1(x))
 
-        x = swish(self.bn2(self.conv2(x)))
-        x = swish(self.bn3(self.conv3(x)))
-        x = swish(self.bn4(self.conv4(x)))
-        x = swish(self.bn5(self.conv5(x)))
-        x = swish(self.bn6(self.conv6(x)))
-        x = swish(self.bn7(self.conv7(x)))
-        x = swish(self.conv8_bn(self.conv8(x)))
-        x = swish(self.conv9_bn(self.conv9(x)))
+        x = swish(self.bn2(self.conv2(x)))#;print(x.size())
+        x = swish(self.bn3(self.conv3(x)))#;print(x.size())
+        x = swish(self.bn4(self.conv4(x)))#;print(x.size())
+        x = swish(self.bn5(self.conv5(x)))#;print(x.size())
+        x = swish(self.bn6(self.conv6(x)))#;print(x.size())
+        x = swish(self.bn7(self.conv7(x)))#;print(x.size())
+        x = swish(self.conv8_bn(self.conv8(x)))#;print(x.size())
+        x = swish(self.conv9_bn(self.conv9(x)))#;print(x.size())
 
         # print(x.size())
-        x = x.view(x.size(0), -1)
+        x = x.view(x.size(0), -1);print(x.size())
         # print(x.size())
         # print(self.fc1(x).size())
-        x = F.elu(self.fc1(x))
+        x = F.elu(self.fc1(x));print(x.size())
         # print('uwuw')
         return F.sigmoid(self.fc2(x))
 
         # x = self.conv9(x)
         # return F.sigmoid(F.avg_pool2d(x, x.size()[2:])).view(x.size()[0], -1)
+
+
+
+
+class patchDiscriminator(nn.Module):
+    def __init__(self,height,width):
+        super(patchDiscriminator, self).__init__()
+        self.height =height
+        self.width = width
+        self.conv1 = nn.Conv2d(3, 64, 3, stride=1, padding=1)
+
+        self.conv2 = nn.Conv2d(64, 64, 3, stride=2, padding=1)
+        self.bn2 = nn.BatchNorm2d(64)
+        self.conv3 = nn.Conv2d(64, 128, 3, stride=1, padding=1)
+        self.bn3 = nn.BatchNorm2d(128)
+        self.conv4 = nn.Conv2d(128, 128, 3, stride=2, padding=1)
+        self.bn4 = nn.BatchNorm2d(128)
+        self.conv5 = nn.Conv2d(128, 256, 3, stride=1, padding=1)
+        self.bn5 = nn.BatchNorm2d(256)
+        self.conv6 = nn.Conv2d(256, 256, 3, stride=2, padding=1)
+        self.bn6 = nn.BatchNorm2d(256)
+        self.conv7 = nn.Conv2d(256, 128, 3, stride=1, padding=1)
+        self.bn7 = nn.BatchNorm2d(128)
+        self.conv8 = nn.Conv2d(128, 64, 3, stride=1, padding=1)
+        self.bn8 = nn.BatchNorm2d(64)
+        self.conv9 = nn.Conv2d(64, 1, 3, stride=1, padding=1)
+        self.bn9 = nn.BatchNorm2d(1)
+
+        # self.fc1 = nn.Linear(2048, 1024)
+        # self.fc2 = nn.Linear(1024, 1)
+
+        # Replaced original paper FC layers with FCN
+        # self.conv9 = nn.Conv2d(512, 1, 1, stride=1, padding=1)
+
+    def forward(self, x):
+        x = swish(self.conv1(x))
+
+        x = swish(self.bn2(self.conv2(x)))#;print(x.size())
+        x = swish(self.bn3(self.conv3(x)))#;print(x.size())
+        x = swish(self.bn4(self.conv4(x)))#;print(x.size())
+        x = swish(self.bn5(self.conv5(x)))#;print(x.size())
+        x = swish(self.bn6(self.conv6(x)))#;print(x.size())
+        x = swish(self.bn7(self.conv7(x)))#;print(x.size())
+        x = swish(self.bn8(self.conv8(x)))#;print(x.size())
+        x = swish(self.bn9(self.conv9(x)))#;print(x.size())
+        x = x.view(x.size(0),-1)#;print(x.size())
+
+        return F.sigmoid(x)
+
+
+

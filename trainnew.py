@@ -150,14 +150,9 @@ for epoch in range(opt.gEpochs):
         # Downsample images to low resolution
         for j in range(opt.batchsize):
             # torchvision.utils.save_image(inputs[j],'main' + str(count) + '.jpg')
-            # img= 
-            # torchvision.utils.save_image(img,'sample' + str(count) + '.jpg')
-            # count+=1
             inputsG[j] = scaleandnorm(inputs[j][:,:siz,:])
             inputsGmask[j] = (1- (inputs[j][:,siz:,:]))
             inputsGimg[j] = normalize(inputs[j][:,:siz,:])
-            # torchvision.utils.save_image(inputsGmask[j],'mask' + str(count) + '.jpg')
-            # print(inputsGmask[j] )
 
         # Generate real and fake inputs
         if opt.cuda:
@@ -237,7 +232,9 @@ for epoch in range(opt.nEpochs):
         if not(int(inputs.size()[0]) == opt.batchsize):
             continue
 
+        # print(inputs.size())
         for j in range(opt.batchsize):
+            # print(inputs[j].size())
             inputsG[j] = scaleandnorm(inputs[j][:,:siz,:])
             inputsGmask[j] = (1- (inputs[j][:,siz:,:]))
             inputsGimg[j] = normalize(inputs[j][:,:siz,:])
