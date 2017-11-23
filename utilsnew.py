@@ -53,7 +53,3 @@ class Visualizer2:
             count+=1
         return count
 
-
-
-
-            
