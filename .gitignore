@@ -114,5 +114,6 @@ savemodelsold/*
 ._*
 *.jpg
 models/*
+models/*/*
 # mypy
 .mypy_cache/
