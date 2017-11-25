@@ -245,6 +245,15 @@ for epoch in range(opt.nEpochs):
         # print(target_realpatch.size())
         lossDreal+= adversarial_criterion(outputsrepatch,target_realpatch)
         mean_discriminator_realloss+=lossDreal.data[0]
+        mean_discriminator_loss+=lossDreal.data[0]
+
+        lossDreal.backward()
+
+        # Update discriminator weights
+        optimD.step()
+        optimDp.step()
+        netD.zero_grad()
+        netDp.zero_grad()
 
         # fake data
         inputs, _ = data
@@ -273,6 +282,16 @@ for epoch in range(opt.nEpochs):
         outputspatch = netDp(inputsD_real)
         D_real = outputs.data.mean()
 
+
+        lossD = adversarial_criterion(outputs, target_fake) + adversarial_criterion(outputspatch,target_fakepatch)
+        mean_discriminator_loss+=lossD.data[0]
+        lossD.backward()
+        
+
+        optimD.step()
+        optimDp.step()
+        netD.zero_grad()
+        netDp.zero_grad()
         # lossD_real = adversarial_criterion(outputs, target_fake)
         # lossD_real.backward()
 
@@ -280,14 +299,17 @@ for epoch in range(opt.nEpochs):
         outputsnewpatch = netDp(inputsD_fake.detach())
         D_fake = outputsnew.data.mean()
 
-        lossD = adversarial_criterion(outputsnew, target_fake) + adversarial_criterion(outputsnewpatch,target_fakepatch) + 1*(adversarial_criterion(outputs, target_fake) + adversarial_criterion(outputspatch,target_fakepatch) + lossDreal)
+         
+        lossD =adversarial_criterion(outputsnew, target_fake) + adversarial_criterion(outputsnewpatch,target_fakepatch) 
+        mean_discriminator_loss+=lossD.data[0]
+        lossD.backward()
+
+
         # if i%50==0:
         #     lossD = adversarial_criterion(outputsnew, target_fake) + 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
         # else:
         #     lossD = 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
 
-        mean_discriminator_loss+=lossD.data[0]
-        lossD.backward()
 
         # Update discriminator weights
         optimD.step()
