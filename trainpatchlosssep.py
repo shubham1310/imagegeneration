@@ -210,6 +210,28 @@ for epoch in range(opt.nEpochs):
     mean_discriminator_loss = 0.0
     mean_discriminator_realloss = 0.0
     for i, data in enumerate(dataloader):
+        # fake data
+        inputs, _ = data
+
+        if not(int(inputs.size()[0]) == opt.batchsize):
+            continue
+
+        # print(inputs.size())
+        for j in range(opt.batchsize):
+            # print(inputs[j].size())
+            inputsG[j] = scaleandnorm(inputs[j][:,:siz,:])
+            inputsGmask[j] = (1- (inputs[j][:,siz:,:]))
+            inputsGimg[j] = normalize(inputs[j][:,:siz,:])
+
+        # Generate real and fake inputs
+        if opt.cuda:
+            inputsD_real = Variable(inputsGimg.cuda())
+            inputmask = Variable(inputsGmask.cuda())
+            inputsD_fake = netG(Variable(inputsG).cuda())
+        else:
+            inputsD_real = Variable(inputsGimg)
+            inputmask = Variable(inputsGmask)
+            inputsD_fake = netG(Variable(inputsG))
 
         if i%50==0:
             ######### Train discriminator #########
@@ -257,28 +279,7 @@ for epoch in range(opt.nEpochs):
             netD.zero_grad()
             netDp.zero_grad()
 
-            # fake data
-            inputs, _ = data
-
-            if not(int(inputs.size()[0]) == opt.batchsize):
-                continue
-
-            # print(inputs.size())
-            for j in range(opt.batchsize):
-                # print(inputs[j].size())
-                inputsG[j] = scaleandnorm(inputs[j][:,:siz,:])
-                inputsGmask[j] = (1- (inputs[j][:,siz:,:]))
-                inputsGimg[j] = normalize(inputs[j][:,:siz,:])
-
-            # Generate real and fake inputs
-            if opt.cuda:
-                inputsD_real = Variable(inputsGimg.cuda())
-                inputmask = Variable(inputsGmask.cuda())
-                inputsD_fake = netG(Variable(inputsG).cuda())
-            else:
-                inputsD_real = Variable(inputsGimg)
-                inputmask = Variable(inputsGmask)
-                inputsD_fake = netG(Variable(inputsG))
+            
 
             outputs = netD(inputsD_real)
             outputspatch = netDp(inputsD_real)
