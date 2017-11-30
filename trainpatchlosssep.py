@@ -303,9 +303,9 @@ for epoch in range(opt.nEpochs):
             D_fake = outputsnew.data.mean()
 
              
-            lossD =adversarial_criterion(outputsnew, target_fake) + adversarial_criterion(outputsnewpatch,target_fakepatch) 
+            lossD2 =adversarial_criterion(outputsnew, target_fake) + adversarial_criterion(outputsnewpatch,target_fakepatch) 
             mean_discriminator_loss+=lossD.data[0]
-            lossD.backward()
+            lossD2.backward()
 
 
             # if i%50==0:
@@ -344,7 +344,7 @@ for epoch in range(opt.nEpochs):
             print('[%d/%d][%d/%d] Dreal(x): %.4f D(x): %.4f D(G(z)): %.4f '% (epoch, opt.nEpochs, i, len(dataloader), Dreal, D_real, D_fake ))
             print('[%d/%d][%d/%d] LossDtotal: %.4f Loss_G (Content/Advers): %.4f/%.4f  Loss_Dreal: %.4f Loss_Dfake: %.4f'
                   % (epoch, opt.nEpochs, i, len(dataloader),lossD.data[0], lossG_content.data[0],
-                     lossG_adversarial.data[0], lossDreal.data[0], lossD.data[0]-lossDreal.data[0]))
+                     lossG_adversarial.data[0], lossDreal.data[0], lossD.data[0] + lossD2.data[0]))
         if i%200==0:
             visualcount = visualizer.show(inputsG, inputsD_fake.cpu().data,visualcount,str(opt.out))
             log_value('D_real_loss', mean_discriminator_realloss/200, logcount)
