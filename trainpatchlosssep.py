@@ -39,7 +39,7 @@ parser.add_argument('--netDp', type=str, default='', help="path to netDp (to con
 parser.add_argument('--out', type=str, default='checkpoints', help='folder to output model checkpoints')
 parser.add_argument('--patchH', type=int, default=25, help='patch height')
 parser.add_argument('--patchW', type=int, default=25, help='patch width')
-
+parser.add_argument('--disstep', type=int, default=25, help='patch width')
 
 opt = parser.parse_args()
 print(opt)
@@ -235,7 +235,7 @@ for epoch in range(opt.nEpochs):
             inputmask = Variable(inputsGmask)
             inputsD_fake = netG(Variable(inputsG))
 
-        if i%50==0:
+        if i%opt.disstep==0:
             dcount+=1
             ######### Train discriminator #########
             netD.zero_grad()
