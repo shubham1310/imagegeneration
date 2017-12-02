@@ -28,9 +28,9 @@ parser.add_argument('--imagesize', type=int, default=200, help='the low resoluti
 parser.add_argument('--upSampling', type=int, default=1, help='low to high resolution scaling factor')
 parser.add_argument('--nEpochs', type=int, default=50, help='number of epochs to train for')
 parser.add_argument('--gEpochs', type=int, default=2, help='number of epochs to pre-train the generator for')
-parser.add_argument('--lrG', type=float, default=0.001, help='learning rate for generator')
-parser.add_argument('--lrD', type=float, default=0.001, help='learning rate for discriminator')
-parser.add_argument('--lrDp', type=float, default=0.001, help='learning rate for patch discriminator')
+parser.add_argument('--lrG', type=float, default=0.00001, help='learning rate for generator')
+parser.add_argument('--lrD', type=float, default=0.0000001, help='learning rate for discriminator')
+parser.add_argument('--lrDp', type=float, default=0.0000001, help='learning rate for patch discriminator')
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 # parser.add_argument('--nGPU', type=int, default=1, help='number of GPUs to use')
 parser.add_argument('--netG', type=str, default='', help="path to netG (to continue training)")
@@ -39,7 +39,7 @@ parser.add_argument('--netDp', type=str, default='', help="path to netDp (to con
 parser.add_argument('--out', type=str, default='checkpoints', help='folder to output model checkpoints')
 parser.add_argument('--patchH', type=int, default=25, help='patch height')
 parser.add_argument('--patchW', type=int, default=25, help='patch width')
-parser.add_argument('--disstep', type=int, default=5, help='patch width')
+parser.add_argument('--disstep', type=int, default=25, help='patch width')
 
 opt = parser.parse_args()
 print(opt)
@@ -94,12 +94,12 @@ dataloaderreal = torch.utils.data.DataLoader(datasetreal, batch_size=opt.batchsi
 
 
 netG = Generator(16, opt.upSampling) 
-# netD = Discriminator()
-# netDp = patchDiscriminator(opt.patchH,opt.patchW)
+netD = Discriminator()
+netDp = patchDiscriminator(opt.patchH,opt.patchW)
 
 # For the content loss
-# feature_extractor = FeatureExtractor(torchvision.models.vgg19(pretrained=True))
-# print feature_extractor
+feature_extractor = FeatureExtractor(torchvision.models.vgg19(pretrained=True))
+print feature_extractor
 content_criterion = nn.MSELoss()
 adversarial_criterion = nn.BCELoss()
 
@@ -113,9 +113,9 @@ if opt.cuda:
     netG = torch.nn.DataParallel(netG)
     netD.cuda()
     netD = torch.nn.DataParallel(netD)
-    # netDp.cuda()
-    # netDp = torch.nn.DataParallel(netDp)
-    # feature_extractor.cuda()
+    netDp.cuda()
+    netDp = torch.nn.DataParallel(netDp)
+    feature_extractor.cuda()
     content_criterion.cuda()
     adversarial_criterion.cuda()
     target_real = target_real.cuda()
@@ -132,9 +132,9 @@ if opt.netD != '':
     netD.load_state_dict(torch.load(opt.netD))
 print netD
 
-# if opt.netDp != '':
-#     netDp.load_state_dict(torch.load(opt.netDp))
-# print netDp
+if opt.netDp != '':
+    netDp.load_state_dict(torch.load(opt.netDp))
+print netDp
 
 optimG = optim.Adam(netG.parameters(), lr=opt.lrG)
 optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
@@ -189,9 +189,9 @@ for epoch in range(opt.gEpochs):
         optimG.step()
 
         # Status and display
-        # if i%50==0:
-        print('[%d/%d][%d/%d] Loss_G: %.4f'% (epoch, opt.gEpochs, i, len(dataloader), lossG_content.data[0],))
-        count= visualizer.show( inputsD_real.cpu().data, inputsD_fake.cpu().data,count,str(opt.out))
+        if i%50==0:
+            print('[%d/%d][%d/%d] Loss_G: %.4f'% (epoch, opt.gEpochs, i, len(dataloader), lossG_content.data[0],))
+            count= visualizer.show( inputsD_real.cpu().data, inputsD_fake.cpu().data,count,str(opt.out))
 
     log_value('G_pixel_loss', lossG_content.data[0], epoch)
     torch.save(netG.state_dict(), '%s/netG_pretrain_%d.pth' % (opt.out, epoch))
@@ -206,9 +206,9 @@ realdata = iter(dataloaderreal)
 for epoch in range(opt.nEpochs):
     gcount =0
     dcount=0
-    mean_generator_content_loss = 0.0
+    # mean_generator_content_loss = 0.0
     mean_generator_adversarial_loss = 0.0
-    mean_generator_total_loss = 0.0
+    # mean_generator_total_loss = 0.0
     mean_discriminator_loss = 0.0
     mean_discriminator_realloss = 0.0
     for i, data in enumerate(dataloader):
@@ -265,32 +265,56 @@ for epoch in range(opt.nEpochs):
                 inputsDreal = Variable(inputsGreal)
 
             outputsre = netD(inputsDreal)
-            # outputsrepatch = netDp(inputsDreal)
+            outputsrepatch = netDp(inputsDreal)
             Dreal = outputsre.data.mean()
+            lossDreal = adversarial_criterion(outputsre, target_real) 
+            # print(outputsrepatch.size())
+            # print(target_realpatch.size())
+            lossDreal+= adversarial_criterion(outputsrepatch,target_realpatch)
+            mean_discriminator_realloss+=lossDreal.data[0]/opt.batchsize
+            mean_discriminator_loss+=lossDreal.data[0]/opt.batchsize
 
-            lossD = adversarial_criterion(outputsre, target_real) 
-            # lossD+= adversarial_criterion(outputsrepatch,target_realpatch)
+            lossDreal.backward()
 
-            mean_discriminator_realloss+=lossD.data[0]/opt.batchsize
+            # Update discriminator weights
+            optimD.step()
+            optimDp.step()
+            netD.zero_grad()
+            netDp.zero_grad()
+
+            
+
+            outputs = netD(inputsD_real)
+            outputspatch = netDp(inputsD_real)
+            D_real = outputs.data.mean()
+
+
+            lossD = adversarial_criterion(outputs, target_fake) + adversarial_criterion(outputspatch,target_fakepatch)
             mean_discriminator_loss+=lossD.data[0]/opt.batchsize
+            lossD.backward()
             
-            # outputs = netD(inputsD_real)
-            # outputspatch = netDp(inputsD_real)
-            # D_real = outputs.data.mean()
-            # lossD = adversarial_criterion(outputs, target_fake) + adversarial_criterion(outputspatch,target_fakepatch)
-            # mean_discriminator_loss+=lossD.data[0]/opt.batchsize
-            # lossD.backward()
-            
+
+            optimD.step()
+            optimDp.step()
+            netD.zero_grad()
+            netDp.zero_grad()
+            # lossD_real = adversarial_criterion(outputs, target_fake)
+            # lossD_real.backward()
+
             outputsnew = netD(inputsD_fake.detach()) # Don't need to compute gradients wrt weights of netG (for efficiency)
-            # outputsnewpatch = netDp(inputsD_fake.detach())
+            outputsnewpatch = netDp(inputsD_fake.detach())
             D_fake = outputsnew.data.mean()
 
              
-            lossD +=adversarial_criterion(outputsnew, target_fake) 
-            # lossD2 += adversarial_criterion(outputsnewpatch,target_fakepatch) 
+            lossD2 =adversarial_criterion(outputsnew, target_fake) + adversarial_criterion(outputsnewpatch,target_fakepatch) 
             mean_discriminator_loss+=lossD.data[0]/opt.batchsize
-            lossD.backward()
+            lossD2.backward()
 
+
+            # if i%50==0:
+            #     lossD = adversarial_criterion(outputsnew, target_fake) + 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
+            # else:
+            #     lossD = 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
 
 
             # Update discriminator weights
@@ -305,15 +329,15 @@ for epoch in range(opt.nEpochs):
         # fake_features = feature_extractor(inputsD_fake*inputmask)
 
 
-        lossG_content = content_criterion(inputsD_real*inputmask, inputsD_fake*inputmask)
+        # lossG_content = content_criterion(fake_features, real_features)
 
-        lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_real)
-        mean_generator_content_loss += lossG_content.data[0]/opt.batchsize
+        lossG_total = adversarial_criterion(netD(inputsD_fake), target_real)
+        # mean_generator_content_loss += lossG_content.data[0]/opt.batchsize
 
-        lossG_total = 0.01*lossG_content + lossG_adversarial 
-        mean_generator_adversarial_loss += lossG_adversarial.data[0]/opt.batchsize
+        # lossG_total = lossG_adversarial 
+        mean_generator_adversarial_loss += lossG_total.data[0]/opt.batchsize
         
-        mean_generator_total_loss += lossG_total.data[0]/opt.batchsize
+        # mean_generator_total_loss += lossG_total.data[0]/opt.batchsize
         lossG_total.backward()
 
         # Update generator weights
@@ -322,20 +346,20 @@ for epoch in range(opt.nEpochs):
         # Status and display
         if i%50==0:
             print('[%d/%d][%d/%d] Dreal(x): %.4f D(x): %.4f D(G(z)): %.4f '% (epoch, opt.nEpochs, i, len(dataloader), Dreal, D_real, D_fake ))
-            print('[%d/%d][%d/%d] LossDtotal: %.4f Loss_G (Content/Advers): %.4f/%.4f  Loss_Dreal: %.4f Loss_Dfake: %.4f'
-                  % (epoch, opt.nEpochs, i, len(dataloader),lossD.data[0], lossG_content.data[0],
-                     lossG_adversarial.data[0], lossDreal.data[0], lossD.data[0] + lossD.data[0]))
+            print('[%d/%d][%d/%d] LossDtotal: %.4f Loss_G (Advers): %.4f  Loss_Dreal: %.4f Loss_Dfake: %.4f'
+                  % (epoch, opt.nEpochs, i, len(dataloader),lossD.data[0], 
+                     lossG_total.data[0], lossDreal.data[0], lossD.data[0] + lossD.data[0]))
         if i%200==0:
             visualcount = visualizer.show(inputsG, inputsD_fake.cpu().data,visualcount,str(opt.out))
             log_value('D_real_loss', mean_discriminator_realloss/dcount, logcount)
             log_value('D_fake_loss',(mean_discriminator_loss-mean_discriminator_realloss)/dcount, logcount)
             log_value('D_total_loss', mean_discriminator_loss/dcount, logcount)
-            log_value('G_content_loss', mean_generator_content_loss/gcount, logcount)
+            # log_value('G_content_loss', mean_generator_content_loss/gcount, logcount)
             log_value('G_advers_loss', mean_generator_adversarial_loss/gcount, logcount)
-            log_value('generator_total_loss', mean_generator_total_loss/gcount, logcount)
-            mean_generator_content_loss = 0.0
+            # log_value('generator_total_loss', mean_generator_total_loss/gcount, logcount)
+            # mean_generator_content_loss = 0.0
             mean_generator_adversarial_loss = 0.0
-            mean_generator_total_loss = 0.0
+            # mean_generator_total_loss = 0.0
             mean_discriminator_loss = 0.0
             mean_discriminator_realloss = 0.0
             logcount+=1
