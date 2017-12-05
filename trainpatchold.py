@@ -93,7 +93,7 @@ dataloaderreal = torch.utils.data.DataLoader(datasetreal, batch_size=opt.batchsi
                                          shuffle=True, num_workers=int(opt.workers))
 
 
-netG = Generator(16, opt.upSampling) 
+netG = Generator(6, opt.upSampling) 
 netD = Discriminator()
 # netDp = patchDiscriminator(opt.patchH,opt.patchW)
 
@@ -249,7 +249,7 @@ for epoch in range(opt.nEpochs):
         lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_real)
         mean_generator_content_loss += lossG_content.data[0]/opt.batchsize
 
-        lossG_total = 0.001*lossG_content + lossG_adversarial 
+        lossG_total = lossG_content + lossG_adversarial 
         mean_generator_adversarial_loss += lossG_adversarial.data[0]/opt.batchsize
         
         mean_generator_total_loss += lossG_total.data[0]/opt.batchsize
@@ -304,7 +304,10 @@ for epoch in range(opt.nEpochs):
             mean_discriminator_loss+=lossD.data[0]/opt.batchsize
             lossD.backward()
 
-
+            grad_of_params = {}
+            for name, parameter in netD.named_parameters():
+                grad_of_param[name] = parameter.grad
+                print(name,parameter.grad)
             # Update discriminator weights
             optimD.step()
             # optimDp.step()
