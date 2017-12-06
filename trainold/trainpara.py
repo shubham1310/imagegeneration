@@ -236,10 +236,12 @@ for epoch in range(opt.nEpochs):
         outputsnew = netD(inputsD_fake.detach()) # Don't need to compute gradients wrt weights of netG (for efficiency)
         D_fake = outputsnew.data.mean()
 
-        if i%50==0:
-            lossD = adversarial_criterion(outputsnew, target_fake) + 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
-        else:
-            lossD = 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
+
+        lossD = adversarial_criterion(outputsnew, target_fake) + 1*(adversarial_criterion(outputs, target_fake) + lossDreal)
+        # if i%50==0:
+        #     lossD = adversarial_criterion(outputsnew, target_fake) + 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
+        # else:
+        #     lossD = 10*(adversarial_criterion(outputs, target_fake) + lossDreal)
 
         mean_discriminator_loss+=lossD.data[0]
         lossD.backward()
@@ -254,7 +256,7 @@ for epoch in range(opt.nEpochs):
         fake_features = feature_extractor(inputsD_fake)
 
         lossG_content = content_criterion(fake_features, real_features)
-        lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_fake)
+        lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_real)
         mean_generator_content_loss += lossG_content.data[0]
 
         lossG_total = 0.1*lossG_content + lossG_adversarial 

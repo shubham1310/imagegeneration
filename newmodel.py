@@ -116,18 +116,12 @@ class Discriminator(nn.Module):
         x = swish(self.conv8_bn(self.conv8(x)))#;print(x.size())
         x = swish(self.conv9_bn(self.conv9(x)))#;print(x.size())
 
-        # print(x.size())
         x = x.view(x.size(0), -1)#;print(x.size())
-        # print(x.size())
-        # print(self.fc1(x).size())
         x = F.elu(self.fc1(x))#;print(x.size())
-        # print('uwuw')
         return F.sigmoid(self.fc2(x))
 
         # x = self.conv9(x)
         # return F.sigmoid(F.avg_pool2d(x, x.size()[2:])).view(x.size()[0], -1)
-
-
 
 
 class patchDiscriminator(nn.Module):

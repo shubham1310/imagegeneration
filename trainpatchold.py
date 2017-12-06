@@ -93,13 +93,13 @@ dataloaderreal = torch.utils.data.DataLoader(datasetreal, batch_size=opt.batchsi
                                          shuffle=True, num_workers=int(opt.workers))
 
 
-netG = Generator(6, opt.upSampling) 
+netG = Generator(16, opt.upSampling) 
 netD = Discriminator()
 # netDp = patchDiscriminator(opt.patchH,opt.patchW)
 
 # For the content loss
-feature_extractor = FeatureExtractor(torchvision.models.vgg19(pretrained=True))
-print feature_extractor
+# feature_extractor = FeatureExtractor(torchvision.models.vgg19(pretrained=True))
+# print feature_extractor
 content_criterion = nn.MSELoss()
 adversarial_criterion = nn.BCELoss()
 
@@ -115,7 +115,7 @@ if opt.cuda:
     netD = torch.nn.DataParallel(netD)
     # netDp.cuda()
     # netDp = torch.nn.DataParallel(netDp)
-    feature_extractor.cuda()
+    # feature_extractor.cuda()
     content_criterion.cuda()
     adversarial_criterion.cuda()
     target_real = target_real.cuda()
@@ -202,6 +202,7 @@ lenreal = len(dataloaderreal)
 count=0
 logcount=0
 visualcount=0
+val = 0
 realdata = iter(dataloaderreal)
 for epoch in range(opt.nEpochs):
     gcount =0
@@ -245,18 +246,35 @@ for epoch in range(opt.nEpochs):
 
         lossG_content = content_criterion(inputsD_fake*inputmask, inputsD_real*inputmask)
         # lossG_content = content_criterion(fake_features, real_features)
+        lossG_content.backward(retain_graph=True)
+        val1 = torch.sum(torch.abs(netG.module.conv3.weight.grad.data))
 
+        netG.zero_grad()
         lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_real)
         mean_generator_content_loss += lossG_content.data[0]/opt.batchsize
 
+        lossG_adversarial.backward(retain_graph=True)
+        val2 = torch.sum(torch.abs(netG.module.conv3.weight.grad.data))
+        print(val1/val2)
+        val +=val1/val2
+
+        netG.zero_grad()
         lossG_total = lossG_content + lossG_adversarial 
         mean_generator_adversarial_loss += lossG_adversarial.data[0]/opt.batchsize
         
         mean_generator_total_loss += lossG_total.data[0]/opt.batchsize
         lossG_total.backward()
 
+        
+
+       
+        # grad_of_param = {}
+            # for name, parameter in netG.named_parameters():
+            #     grad_of_param[name] = parameter.grad
+            #     print(name)
+             # [torch.cuda.FloatTensor of size 3x64x9x9 (GPU 0)]  
         # Update generator weights
-        optimG.step()
+        # optimG.step()
 
         if i%opt.disstep==0:
             dcount+=1
@@ -294,20 +312,17 @@ for epoch in range(opt.nEpochs):
             # lossDreal+= adversarial_criterion(outputsrepatch,target_realpatch)
             mean_discriminator_realloss+=lossDreal.data[0]/opt.batchsize
 
-
             outputsnew = netD(inputsD_fake.detach()) # Don't need to compute gradients wrt weights of netG (for efficiency)
             # outputsnewpatch = netDp(inputsD_fake.detach())
             D_fake = outputsnew.data.mean()
 
-             
+        
+            # lossD =adversarial_criterion(outputsnew, target_fake)
             lossD =lossDreal+adversarial_criterion(outputsnew, target_fake) #+ adversarial_criterion(outputsnewpatch,target_fakepatch) 
             mean_discriminator_loss+=lossD.data[0]/opt.batchsize
             lossD.backward()
-
-            grad_of_params = {}
-            for name, parameter in netD.named_parameters():
-                grad_of_param[name] = parameter.grad
-                print(name,parameter.grad)
+           
+            
             # Update discriminator weights
             optimD.step()
             # optimDp.step()
@@ -315,6 +330,7 @@ for epoch in range(opt.nEpochs):
 
         # Status and display
         if i%50==0:
+            print(val/gcount)
             print('[%d/%d][%d/%d] Dreal(x): %.4f D(G(z)): %.4f '% (epoch, opt.nEpochs, i, len(dataloader), Dreal, D_fake ))
             print('[%d/%d][%d/%d] LossDtotal: %.4f Loss_G (Content/Advers): %.4f/%.4f  Loss_Dreal: %.4f Loss_Dfake: %.4f'
                   % (epoch, opt.nEpochs, i, len(dataloader),lossD.data[0], lossG_content.data[0],
