@@ -26,7 +26,7 @@ parser.add_argument('--workers', type=int, default=4, help='number of data loadi
 parser.add_argument('--batchsize', type=int, default=16, help='input batch size')
 parser.add_argument('--imagesize', type=int, default=200, help='the low resolution image size')
 parser.add_argument('--upSampling', type=int, default=1, help='low to high resolution scaling factor')
-parser.add_argument('--nEpochs', type=int, default=50, help='number of epochs to train for')
+parser.add_argument('--nEpochs', type=int, default=25, help='number of epochs to train for')
 parser.add_argument('--gEpochs', type=int, default=2, help='number of epochs to pre-train the generator for')
 parser.add_argument('--lrG', type=float, default=0.0001, help='learning rate for generator')
 parser.add_argument('--lrD', type=float, default=0.0001, help='learning rate for discriminator')
@@ -40,6 +40,7 @@ parser.add_argument('--out', type=str, default='checkpoints', help='folder to ou
 parser.add_argument('--patchH', type=int, default=25, help='patch height')
 parser.add_argument('--patchW', type=int, default=25, help='patch width')
 parser.add_argument('--disstep', type=int, default=1, help='patch width')
+parser.add_argument('--losfac', type=float, default=1.0, help='factor to multiply the content loss of Generator')
 
 opt = parser.parse_args()
 print(opt)
@@ -93,7 +94,7 @@ dataloaderreal = torch.utils.data.DataLoader(datasetreal, batch_size=opt.batchsi
                                          shuffle=True, num_workers=int(opt.workers))
 
 
-netG = Generator(16, opt.upSampling) 
+netG = Generator(6, opt.upSampling) 
 netD = Discriminator()
 # netDp = patchDiscriminator(opt.patchH,opt.patchW)
 
@@ -246,26 +247,24 @@ for epoch in range(opt.nEpochs):
 
         lossG_content = content_criterion(inputsD_fake*inputmask, inputsD_real*inputmask)
         # lossG_content = content_criterion(fake_features, real_features)
-        lossG_content.backward(retain_graph=True)
-        val1 = torch.sum(torch.abs(netG.module.conv3.weight.grad.data))
+        # lossG_content.backward(retain_graph=True)
+        # val1 = torch.sum(torch.abs(netG.module.conv3.weight.grad.data))
 
-        netG.zero_grad()
+        # netG.zero_grad()
         lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_real)
         mean_generator_content_loss += lossG_content.data[0]/opt.batchsize
 
-        lossG_adversarial.backward(retain_graph=True)
-        val2 = torch.sum(torch.abs(netG.module.conv3.weight.grad.data))
-        print(val1/val2)
-        val +=val1/val2
+        # lossG_adversarial.backward(retain_graph=True)
+        # val2 = torch.sum(torch.abs(netG.module.conv3.weight.grad.data))
+        # print(val1/val2)
+        # val +=val1/val2
 
-        netG.zero_grad()
-        lossG_total = lossG_content + lossG_adversarial 
+        # netG.zero_grad()
+        lossG_total = opt.losfac*lossG_content + lossG_adversarial 
         mean_generator_adversarial_loss += lossG_adversarial.data[0]/opt.batchsize
         
         mean_generator_total_loss += lossG_total.data[0]/opt.batchsize
         lossG_total.backward()
-
-        
 
        
         # grad_of_param = {}
@@ -274,7 +273,7 @@ for epoch in range(opt.nEpochs):
             #     print(name)
              # [torch.cuda.FloatTensor of size 3x64x9x9 (GPU 0)]  
         # Update generator weights
-        # optimG.step()
+        optimG.step()
 
         if i%opt.disstep==0:
             dcount+=1
