@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 def swish(x):
-    return x # * F.sigmoid(x)
+    return F.relu(x) # * F.sigmoid(x)
 
 class FeatureExtractor(nn.Module):
     def __init__(self, cnn, feature_layer=11):
