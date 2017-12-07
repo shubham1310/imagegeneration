@@ -8,8 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-def swish(x):
-    return F.relu(x) # * F.sigmoid(x)
+# def  F.relu(x):
+#     return F.relu(x) # * F.sigmoid(x)
 
 class FeatureExtractor(nn.Module):
     def __init__(self, cnn, feature_layer=11):
@@ -30,7 +30,7 @@ class residualBlock(nn.Module):
         self.bn2 = nn.BatchNorm2d(n)
 
     def forward(self, x):
-        y = swish(self.bn1(self.conv1(x)))
+        y =  F.relu(self.bn1(self.conv1(x)))
         return self.bn2(self.conv2(y)) + x
 
 class upsampleBlock(nn.Module):
@@ -41,7 +41,7 @@ class upsampleBlock(nn.Module):
         self.shuffler = nn.PixelShuffle(2)
 
     def forward(self, x):
-        return swish(self.shuffler(self.conv(x)))
+        return  F.relu(self.shuffler(self.conv(x)))
 
 class Generator(nn.Module):
     def __init__(self, n_residual_blocks, upsample_factor):
@@ -63,7 +63,7 @@ class Generator(nn.Module):
         self.conv3 = nn.Conv2d(64, 3, 9, stride=1, padding=4)
 
     def forward(self, x):
-        x = swish(self.conv1(x))
+        x =  F.relu(self.conv1(x))
 
         y = x.clone()
         for i in range(self.n_residual_blocks):
@@ -105,16 +105,16 @@ class Discriminator(nn.Module):
         # self.conv9 = nn.Conv2d(512, 1, 1, stride=1, padding=1)
 
     def forward(self, x):
-        x = swish(self.conv1(x))
+        x =  F.relu(self.conv1(x))
 
-        x = swish(self.bn2(self.conv2(x)))#;print(x.size())
-        x = swish(self.bn3(self.conv3(x)))#;print(x.size())
-        x = swish(self.bn4(self.conv4(x)))#;print(x.size())
-        x = swish(self.bn5(self.conv5(x)))#;print(x.size())
-        x = swish(self.bn6(self.conv6(x)))#;print(x.size())
-        x = swish(self.bn7(self.conv7(x)))#;print(x.size())
-        x = swish(self.conv8_bn(self.conv8(x)))#;print(x.size())
-        x = swish(self.conv9_bn(self.conv9(x)))#;print(x.size())
+        x =  F.relu(self.bn2(self.conv2(x)))#;print(x.size())
+        x =  F.relu(self.bn3(self.conv3(x)))#;print(x.size())
+        x =  F.relu(self.bn4(self.conv4(x)))#;print(x.size())
+        x =  F.relu(self.bn5(self.conv5(x)))#;print(x.size())
+        x =  F.relu(self.bn6(self.conv6(x)))#;print(x.size())
+        x =  F.relu(self.bn7(self.conv7(x)))#;print(x.size())
+        x =  F.relu(self.conv8_bn(self.conv8(x)))#;print(x.size())
+        x =  F.relu(self.conv9_bn(self.conv9(x)))#;print(x.size())
 
         x = x.view(x.size(0), -1)#;print(x.size())
         x = F.elu(self.fc1(x))#;print(x.size())
@@ -155,16 +155,16 @@ class patchDiscriminator(nn.Module):
         # self.conv9 = nn.Conv2d(512, 1, 1, stride=1, padding=1)
 
     def forward(self, x):
-        x = swish(self.conv1(x))
+        x =  F.relu(self.conv1(x))
 
-        x = swish(self.bn2(self.conv2(x)))#;print(x.size())
-        x = swish(self.bn3(self.conv3(x)))#;print(x.size())
-        x = swish(self.bn4(self.conv4(x)))#;print(x.size())
-        x = swish(self.bn5(self.conv5(x)))#;print(x.size())
-        x = swish(self.bn6(self.conv6(x)))#;print(x.size())
-        x = swish(self.bn7(self.conv7(x)))#;print(x.size())
-        x = swish(self.bn8(self.conv8(x)))#;print(x.size())
-        x = swish(self.bn9(self.conv9(x)))#;print(x.size())
+        x =  F.relu(self.bn2(self.conv2(x)))#;print(x.size())
+        x =  F.relu(self.bn3(self.conv3(x)))#;print(x.size())
+        x =  F.relu(self.bn4(self.conv4(x)))#;print(x.size())
+        x =  F.relu(self.bn5(self.conv5(x)))#;print(x.size())
+        x =  F.relu(self.bn6(self.conv6(x)))#;print(x.size())
+        x =  F.relu(self.bn7(self.conv7(x)))#;print(x.size())
+        x =  F.relu(self.bn8(self.conv8(x)))#;print(x.size())
+        x =  F.relu(self.bn9(self.conv9(x)))#;print(x.size())
         x = x.view(x.size(0),-1)#;print(x.size())
 
         return F.sigmoid(x)
