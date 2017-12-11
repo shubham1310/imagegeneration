@@ -95,11 +95,12 @@ class Discriminator(nn.Module):
         self.bn7 = nn.BatchNorm2d(512)
         self.conv8 = nn.Conv2d(512, 512, 3, stride=2, padding=1)
         self.conv8_bn = nn.BatchNorm2d(512)
-        self.conv9 = nn.Conv2d(512, 512, 3, stride=6, padding=0)
+        self.conv9 = nn.Conv2d(512, 512, 3, stride=2, padding=1)
         self.conv9_bn = nn.BatchNorm2d(512)
 
-        self.fc1 = nn.Linear(2048, 1024)
-        self.fc2 = nn.Linear(1024, 1)
+        self.fc1 = nn.Linear(512*7*7, 1024)
+        self.fc2 = nn.Linear(1024, 512)
+        self.fc3 = nn.Linear(512, 1)
 
         # Replaced original paper FC layers with FCN
         # self.conv9 = nn.Conv2d(512, 1, 1, stride=1, padding=1)
@@ -118,7 +119,8 @@ class Discriminator(nn.Module):
 
         x = x.view(x.size(0), -1)#;print(x.size())
         x = F.elu(self.fc1(x))#;print(x.size())
-        return F.sigmoid(self.fc2(x))
+        x = F.elu(self.fc2(x))#;print(x.size())
+        return F.sigmoid(self.fc3(x))
 
         # x = self.conv9(x)
         # return F.sigmoid(F.avg_pool2d(x, x.size()[2:])).view(x.size()[0], -1)

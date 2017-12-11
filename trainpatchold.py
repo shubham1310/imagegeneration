@@ -39,7 +39,7 @@ parser.add_argument('--netDp', type=str, default='', help="path to netDp (to con
 parser.add_argument('--out', type=str, default='checkpoints', help='folder to output model checkpoints')
 parser.add_argument('--patchH', type=int, default=25, help='patch height')
 parser.add_argument('--patchW', type=int, default=25, help='patch width')
-parser.add_argument('--disstep', type=int, default=1, help='patch width')
+parser.add_argument('--dstep', type=int, default=1, help='number of steps for discriminator')
 parser.add_argument('--losfac', type=float, default=1.0, help='factor to multiply the content loss of Generator')
 
 opt = parser.parse_args()
@@ -275,7 +275,7 @@ for epoch in range(opt.nEpochs):
         # Update generator weights
         optimG.step()
 
-        if i%opt.disstep==0:
+        if i%opt.dstep==0:
             dcount+=1
             ######### Train discriminator #########
             netD.zero_grad()
@@ -329,7 +329,7 @@ for epoch in range(opt.nEpochs):
 
         # Status and display
         if i%50==0:
-            print(val/gcount)
+            # print(val/gcount)
             print('[%d/%d][%d/%d] Dreal(x): %.4f D(G(z)): %.4f '% (epoch, opt.nEpochs, i, len(dataloader), Dreal, D_fake ))
             print('[%d/%d][%d/%d] LossDtotal: %.4f Loss_G (Content/Advers): %.4f/%.4f  Loss_Dreal: %.4f Loss_Dfake: %.4f'
                   % (epoch, opt.nEpochs, i, len(dataloader),lossD.data[0], lossG_content.data[0],
