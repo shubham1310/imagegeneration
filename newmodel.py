@@ -8,8 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-# def  F.relu(x):
-#     return F.relu(x) # * F.sigmoid(x)
 
 class FeatureExtractor(nn.Module):
     def __init__(self, cnn, feature_layer=11):
@@ -148,7 +146,6 @@ class patchDiscriminator(nn.Module):
         self.conv8 = nn.Conv2d(128, 64, 3, stride=1, padding=1)
         self.bn8 = nn.BatchNorm2d(64)
         self.conv9 = nn.Conv2d(64, 1, 3, stride=1, padding=1)
-        self.bn9 = nn.BatchNorm2d(1)
 
         # self.fc1 = nn.Linear(2048, 1024)
         # self.fc2 = nn.Linear(1024, 1)
@@ -166,7 +163,7 @@ class patchDiscriminator(nn.Module):
         x =  F.relu(self.bn6(self.conv6(x)))#;print(x.size())
         x =  F.relu(self.bn7(self.conv7(x)))#;print(x.size())
         x =  F.relu(self.bn8(self.conv8(x)))#;print(x.size())
-        x =  F.relu(self.bn9(self.conv9(x)))#;print(x.size())
+        x =  self.conv9(x)#;print(x.size())
         x = x.view(x.size(0),-1)#;print(x.size())
 
         return F.sigmoid(x)

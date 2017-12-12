@@ -138,7 +138,7 @@ optimG = optim.Adam(netG.parameters(), lr=opt.lrG)
 # optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
 optimDp = optim.SGD(netDp.parameters(), lr=opt.lrDp, momentum=0.9, nesterov=True)
 
-configure('logs/' + 'genimage-' + str(opt.out) + str(opt.batchsize) + '-' + str(opt.lrG) + '-' + str(opt.lrDp), flush_secs=5)
+configure('logs/' + 'patchimage-' + str(opt.out) + str(opt.batchsize) + '-' + str(opt.lrG) + '-' + str(opt.lrDp), flush_secs=5)
 visualizer = Visualizer2()
 dire ='resultimages/' +str(opt.out) +'/'
 if not os.path.exists(dire):
