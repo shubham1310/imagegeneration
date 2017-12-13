@@ -201,6 +201,8 @@ count=0
 logcount=0
 visualcount=0
 val = 0
+val1m=0
+val2m=0
 valcount=0
 realdata = iter(dataloaderreal)
 for epoch in range(opt.nEpochs):
@@ -242,25 +244,32 @@ for epoch in range(opt.nEpochs):
 
         # real_features = Variable(feature_extractor(inputsD_real*inputmask).data)
         # fake_features = feature_extractor(inputsD_fake*inputmask)
+        # lossG_content = content_criterion(fake_features, real_features)
+        # lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_real)
+        
 
         lossG_content = content_criterion(inputsD_fake*inputmask, inputsD_real*inputmask)
-        # lossG_content = content_criterion(fake_features, real_features)
         # lossG_content.backward(retain_graph=True)
         # val1 = torch.sum(torch.abs(netG.module.conv3.weight.grad.data))
-        # vcount+=1
+        # valcount+=1
         # netG.zero_grad()
-        # lossG_adversarial = adversarial_criterion(netDp(inputsD_fake), target_real)
         lossG_adversarial = adversarial_criterion(netDp(inputsD_fake), target_realpatch)
-        mean_generator_content_loss += lossG_content.data[0]/opt.batchsize
+        
 
         # lossG_adversarial.backward(retain_graph=True)
         # val2 = torch.sum(torch.abs(netG.module.conv3.weight.grad.data))
-        # print(val1/val2)
+        # print('G_content: %.4f G_adversarial: %.4f G_content/G_adversarial: %.4f'%(val1,val2,val1/val2))
         # val +=val1/val2
+        # val1m+=val1
+        # val2m+=val2
+        # log_value('G_content', val1, valcount)
+        # log_value('G_adversarial', val2, valcount)
+        # log_value('G_content/G_adversarial', val1/val2, valcount)
 
         # netG.zero_grad()
         lossG_total = opt.losfac*lossG_content + lossG_adversarial 
         mean_generator_adversarial_loss += lossG_adversarial.data[0]/opt.batchsize
+        mean_generator_content_loss += lossG_content.data[0]/opt.batchsize
         
         mean_generator_total_loss += lossG_total.data[0]/opt.batchsize
         lossG_total.backward()
@@ -270,6 +279,8 @@ for epoch in range(opt.nEpochs):
             # for name, parameter in netG.named_parameters():
             #     grad_of_param[name] = parameter.grad
             #     print(name)
+
+
         # Update generator weights
         optimG.step()
 
@@ -328,7 +339,7 @@ for epoch in range(opt.nEpochs):
 
         # Status and display
         if i%50==0:
-            # print(val/valcount)
+            # print("Average G_content: %.4f G_adversarial: %.4f  G_content/G_adversarial: %.4f"%(val1m/valcount,val2m/valcount,val/valcount))
             print('[%d/%d][%d/%d] Dreal(x): %.4f D(G(z)): %.4f '% (epoch, opt.nEpochs, i, len(dataloader), Dreal, D_fake ))
             print('[%d/%d][%d/%d] LossDtotal: %.4f Loss_G (Content/Advers): %.4f/%.4f  Loss_Dreal: %.4f Loss_Dfake: %.4f'
                   % (epoch, opt.nEpochs, i, len(dataloader),lossD.data[0], lossG_content.data[0],
