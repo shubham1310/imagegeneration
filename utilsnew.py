@@ -29,33 +29,21 @@ class Visualizer2:
 
         self.show_step = show_step
         self.step = 0
-
         self.figure, (self.lr_plot, self.fake_plot) = plt.subplots(1,2)
         self.figure.show()
-
         self.lr_image_ph = None
-        #self.hr_image_ph = None
         self.fake_hr_image_ph = None
 
     def show(self, inputsG, inputstrans,count,name):
-
-        # self.step += 1
-        # if self.step == self.show_step:
-        # self.step = 0
-
         for j in range(2):
             i = random.randint(0, inputsG.size(0) -1)
             lr_image = self.transform(inputsG[i])
-            #hr_image = self.transform(inputsD_real[i])
             transformimage = self.transform(inputstrans[i])
-
             if self.lr_image_ph is None:
                 self.lr_image_ph = self.lr_plot.imshow(lr_image)
-                #self.hr_image_ph = self.hr_plot.imshow(hr_image)
                 self.fake_hr_image_ph = self.fake_plot.imshow(transformimage)
             else:
                 self.lr_image_ph.set_data(lr_image)
-                #self.hr_image_ph.set_data(hr_image)
                 self.fake_hr_image_ph.set_data(transformimage)
 
             self.figure.canvas.draw()
@@ -73,7 +61,7 @@ class SingleImage(Dataset):
         imgname = random.choice(os.listdir(self.imageFolder))
         while not(imgname[-1] =='g'):
             imgname = random.choice(os.listdir(self.imageFolder))
-        img = Image.open(os.path.join(folderpath,imgname))
+        img = Image.open(os.path.join(self.imageFolder,imgname))
 
         if self.transform is not None:
             img = self.transform(img)
