@@ -16,8 +16,8 @@ import torchvision.transforms as transforms
 
 from tensorboard_logger import configure, log_value
 
-from newmodel import Generator, Discriminator, FeatureExtractor, patchDiscriminator
-from utilsnew import Visualizer2
+from newmodel import Generator, Discriminator, FeatureExtractor #, patchDiscriminator
+from utilsnew import Visualizer2, SingleImage
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataroot', type=str, default='../imagegen/maskdata', help='path to dataset')
@@ -28,15 +28,15 @@ parser.add_argument('--upSampling', type=int, default=1, help='low to high resol
 parser.add_argument('--nEpochs', type=int, default=25, help='number of epochs to train for')
 parser.add_argument('--gEpochs', type=int, default=2, help='number of epochs to pre-train the generator for')
 parser.add_argument('--lrG', type=float, default=0.0001, help='learning rate for generator')
-# parser.add_argument('--lrD', type=float, default=0.0001, help='learning rate for discriminator')
-parser.add_argument('--lrDp', type=float, default=0.0001, help='learning rate for patch discriminator')
+parser.add_argument('--lrD', type=float, default=0.0001, help='learning rate for discriminator')
+# parser.add_argument('--lrDp', type=float, default=0.0001, help='learning rate for patch discriminator')
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--netG', type=str, default='', help="path to netG (to continue training)")
-# parser.add_argument('--netD', type=str, default='', help="path to netD (to continue training)")
-parser.add_argument('--netDp', type=str, default='', help="path to netDp (to continue training)")
+parser.add_argument('--netD', type=str, default='', help="path to netD (to continue training)")
+# parser.add_argument('--netDp', type=str, default='', help="path to netDp (to continue training)")
 parser.add_argument('--out', type=str, default='checkpoints', help='folder to output model checkpoints')
-parser.add_argument('--patchH', type=int, default=25, help='patch height')
-parser.add_argument('--patchW', type=int, default=25, help='patch width')
+# parser.add_argument('--patchH', type=int, default=25, help='patch height')
+# parser.add_argument('--patchW', type=int, default=25, help='patch width')
 parser.add_argument('--disstep', type=int, default=1, help='patch width')
 parser.add_argument('--losfac', type=float, default=1.0, help='factor to multiply the content loss of Generator')
 
@@ -78,12 +78,18 @@ backtrans= transforms.Compose([transforms.Normalize(mean = [-2.118, -2.036, -1.8
                             transforms.ToPILImage(),
                             transforms.Resize(opt.imagesize)])
 
-dataset = datasets.ImageFolder(root= os.path.join(opt.dataroot, 'fakeo') ,
-                                transform=transformmask)
-datasetreal = datasets.ImageFolder(root= os.path.join(opt.dataroot, 'realo') ,
-                                transform=transform)
+if opt.type=='male':
+    datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'gen') ,
+                                    transform=transformmask)
+    datasetreal = datasets.ImageFolder(root= os.path.join(opt.dataroot, 'origmale') ,
+                                    transform=transform)
+else:
+    datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'fegen') ,
+                                    transform=transformmask)
+    datasetreal = datasets.ImageFolder(root= os.path.join(opt.dataroot, 'origfemale') ,
+                                    transform=transform)
 
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchsize,
+dataloaderfake = torch.utils.data.DataLoader(datasetfake, batch_size=opt.batchsize,
                                          shuffle=True, num_workers=int(opt.workers))
 
 
@@ -92,8 +98,8 @@ dataloaderreal = torch.utils.data.DataLoader(datasetreal, batch_size=opt.batchsi
 
 
 netG = Generator(6, opt.upSampling) 
-# netD = Discriminator()
-netDp = patchDiscriminator(opt.patchH,opt.patchW)
+netD = Discriminator()
+# netDp = patchDiscriminator(opt.patchH,opt.patchW)
 
 # For the content loss
 # feature_extractor = FeatureExtractor(torchvision.models.vgg19(pretrained=True))
@@ -102,50 +108,51 @@ content_criterion = nn.MSELoss()
 adversarial_criterion = nn.BCELoss()
 
 target_real = Variable(torch.ones(opt.batchsize,1))
-target_realpatch = Variable(torch.ones(opt.batchsize,opt.patchW*opt.patchH))
 target_fake = Variable(torch.zeros(opt.batchsize,1))
-target_fakepatch = Variable(torch.zeros(opt.batchsize,opt.patchW*opt.patchH))
+# target_realpatch = Variable(torch.ones(opt.batchsize,opt.patchW*opt.patchH))
+# target_fakepatch = Variable(torch.zeros(opt.batchsize,opt.patchW*opt.patchH))
+
 # if gpu is to be used
 if opt.cuda:
     netG.cuda()
     netG = torch.nn.DataParallel(netG)
-    # netD.cuda()
-    # netD = torch.nn.DataParallel(netD)
-    netDp.cuda()
-    netDp = torch.nn.DataParallel(netDp)
-    # feature_extractor.cuda()
+    netD.cuda()
+    netD = torch.nn.DataParallel(netD)
     content_criterion.cuda()
     adversarial_criterion.cuda()
     target_real = target_real.cuda()
     target_fake = target_fake.cuda()
-    target_fakepatch = target_fakepatch.cuda()
-    target_realpatch = target_realpatch.cuda()
+    # target_fakepatch = target_fakepatch.cuda()
+    # target_realpatch = target_realpatch.cuda()
+    # netDp.cuda()
+    # netDp = torch.nn.DataParallel(netDp)
+    # feature_extractor.cuda()
 
 
 if opt.netG != '':
     netG.load_state_dict(torch.load(opt.netG))
 print netG
 
-# if opt.netD != '':
-#     netD.load_state_dict(torch.load(opt.netD))
-# print netD
+if opt.netD != '':
+    netD.load_state_dict(torch.load(opt.netD))
+print netD
 
-if opt.netDp != '':
-    netDp.load_state_dict(torch.load(opt.netDp))
-print netDp
+# if opt.netDp != '':
+#     netDp.load_state_dict(torch.load(opt.netDp))
+# print netDp
 
 optimG = optim.Adam(netG.parameters(), lr=opt.lrG)
-# optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
-optimDp = optim.SGD(netDp.parameters(), lr=opt.lrDp, momentum=0.9, nesterov=True)
+optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
+# optimDp = optim.SGD(netDp.parameters(), lr=opt.lrDp, momentum=0.9, nesterov=True)
 
-configure('logs/' + 'patchimage-' + str(opt.out) + str(opt.batchsize) + '-' + str(opt.lrG) + '-' + str(opt.lrDp), flush_secs=5)
+configure('logs/' + 'patchimage-' + str(opt.out) + str(opt.batchsize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
 visualizer = Visualizer2()
 dire ='resultimages/' +str(opt.out) +'/'
 if not os.path.exists(dire):
     os.makedirs(dire)
 
 inputsG = torch.FloatTensor(opt.batchsize, 3, opt.imagesize, opt.imagesize)
-inputsGmask = torch.FloatTensor(opt.batchsize, 3, opt.imagesize*opt.upSampling, opt.imagesize*opt.upSampling)
+# inputsGmask = torch.FloatTensor(opt.batchsize, 3, opt.imagesize*opt.upSampling, opt.imagesize*opt.upSampling)
 inputsGimg = torch.FloatTensor(opt.batchsize, 3, opt.imagesize*opt.upSampling, opt.imagesize*opt.upSampling)
 inputsGreal = torch.FloatTensor(opt.batchsize, 3, opt.imagesize*opt.upSampling, opt.imagesize*opt.upSampling)
 
@@ -164,23 +171,22 @@ for epoch in range(opt.gEpochs):
         for j in range(opt.batchsize):
             # torchvision.utils.save_image(inputs[j],'main' + str(count) + '.jpg')
             inputsG[j] = scaleandnorm(inputs[j][:,:siz,:])
-            inputsGmask[j] = (1- (inputs[j][:,siz:,:]))
+            # inputsGmask[j] = (1- (inputs[j][:,siz:,:]))
             inputsGimg[j] = normalize(inputs[j][:,:siz,:])
 
         # Generate real and fake inputs
         if opt.cuda:
             inputsD_real = Variable(inputsGimg.cuda())
-            inputmask = Variable(inputsGmask.cuda())
+            # inputmask = Variable(inputsGmask.cuda())
             inputsD_fake = netG(Variable(inputsG).cuda())
         else:
             inputsD_real = Variable(inputsGimg)
-            inputmask = Variable(inputsGmask)
+            # inputmask = Variable(inputsGmask)
             inputsD_fake = netG(Variable(inputsG))
 
         ######### Train generator #########
         netG.zero_grad()
         lossG_content = content_criterion(inputsD_fake, inputsD_real)
-        # lossG_content = content_criterion(inputsD_fake*inputmask, inputsD_real*inputmask)
         lossG_content.backward()
 
         # Update generator weights
@@ -224,17 +230,17 @@ for epoch in range(opt.nEpochs):
         for j in range(opt.batchsize):
             # print(inputs[j].size())
             inputsG[j] = scaleandnorm(inputs[j][:,:siz,:])
-            inputsGmask[j] = (1- (inputs[j][:,siz:,:]))
+            # inputsGmask[j] = (1- (inputs[j][:,siz:,:]))
             inputsGimg[j] = normalize(inputs[j][:,:siz,:])
 
         # Generate real and fake inputs
         if opt.cuda:
             inputsD_real = Variable(inputsGimg.cuda())
-            inputmask = Variable(inputsGmask.cuda())
+            # inputmask = Variable(inputsGmask.cuda())
             inputsD_fake = netG(Variable(inputsG).cuda())
         else:
             inputsD_real = Variable(inputsGimg)
-            inputmask = Variable(inputsGmask)
+            # inputmask = Variable(inputsGmask)
             inputsD_fake = netG(Variable(inputsG))
 
 
@@ -248,7 +254,7 @@ for epoch in range(opt.nEpochs):
         # lossG_adversarial = adversarial_criterion(netD(inputsD_fake), target_real)
         
 
-        lossG_content = content_criterion(inputsD_fake*inputmask, inputsD_real*inputmask)
+        lossG_content = content_criterion(inputsD_fake, inputsD_real)
         # lossG_content.backward(retain_graph=True)
         # val1 = torch.sum(torch.abs(netG.module.conv3.weight.grad.data))
         # valcount+=1

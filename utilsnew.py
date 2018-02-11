@@ -3,7 +3,17 @@
 
 TODO:
 """
+from torch.utils.data import DataLoader,Dataset
+import numpy as np
+import random
+from PIL import Image
+import torch
+import os
+import itertools
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
 
+import argparse
 import random
 
 from torchvision import transforms
@@ -53,3 +63,21 @@ class Visualizer2:
             count+=1
         return count
 
+class SingleImage(Dataset):
+    
+    def __init__(self, imageFolder, transform=None):
+        self.imageFolder = imageFolder 
+        self.transform = transform
+        
+    def __getitem__(self,index):
+        imgname = random.choice(os.listdir(self.imageFolder))
+        while not(imgname[-1] =='g'):
+            imgname = random.choice(os.listdir(self.imageFolder))
+        img = Image.open(os.path.join(folderpath,imgname))
+
+        if self.transform is not None:
+            img = self.transform(img)
+        return img
+
+    def __len__(self):
+        return len(os.listdir(self.imageFolder))
