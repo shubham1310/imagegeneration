@@ -34,6 +34,7 @@ parser.add_argument('--lrD', type=float, default=0.0001, help='learning rate for
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--netG', type=str, default='', help="path to netG (to continue training)")
 parser.add_argument('--netD', type=str, default='', help="path to netD (to continue training)")
+parser.add_argument('--contloss', type=str, default='l2', help="l2/l1")
 # parser.add_argument('--netDp', type=str, default='', help="path to netDp (to continue training)")
 parser.add_argument('--out', type=str, default='checkpoints', help='folder to output model checkpoints')
 # parser.add_argument('--patchH', type=int, default=25, help='patch height')
@@ -53,9 +54,6 @@ if torch.cuda.is_available() and not opt.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
 transform = transforms.Compose([transforms.Resize((opt.imagesize*opt.upSampling,opt.imagesize*opt.upSampling)), 
-                                transforms.ToTensor()]) #opt.upSampling
-
-transformmask = transforms.Compose([transforms.Resize((2*opt.imagesize*opt.upSampling,opt.imagesize*opt.upSampling)), 
                                 transforms.ToTensor()]) #opt.upSampling
 
 normalize = transforms.Normalize(mean = [0.485, 0.456, 0.406],
@@ -81,12 +79,12 @@ backtrans= transforms.Compose([transforms.Normalize(mean = [-2.118, -2.036, -1.8
 
 if opt.type=='male':
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'gen') ,
-                                    transform=transformmask)
+                                    transform=transform)
     datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'origmale') ,
                                     transform=transform)
 else:
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'fegen') ,
-                                    transform=transformmask)
+                                    transform=transform)
     datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'origfemale') ,
                                     transform=transform)
 
@@ -105,7 +103,13 @@ netD = Discriminator()
 # For the content loss
 # feature_extractor = FeatureExtractor(torchvision.models.vgg19(pretrained=True))
 # print feature_extractor
-content_criterion = nn.MSELoss()
+if opt.contloss=='l2':
+    print('L2 content loss')
+    content_criterion = nn.MSELoss()
+else:
+    print('L1 content loss')
+    content_criterion = nn.L1Loss()
+
 adversarial_criterion = nn.BCELoss()
 
 target_real = Variable(torch.ones(opt.batchsize,1))
@@ -146,7 +150,7 @@ optimG = optim.Adam(netG.parameters(), lr=opt.lrG)
 optimD = optim.SGD(netD.parameters(), lr=opt.lrD, momentum=0.9, nesterov=True)
 # optimDp = optim.SGD(netDp.parameters(), lr=opt.lrDp, momentum=0.9, nesterov=True)
 
-configure('logs/' + 'patchimage-' + str(opt.out) + str(opt.batchsize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
+configure('logs/' + 'image-' + str(opt.out) + str(opt.batchsize) + '-' + str(opt.lrG) + '-' + str(opt.lrD), flush_secs=5)
 visualizer = Visualizer2()
 dire ='resultimages/' +str(opt.out) +'/'
 if not os.path.exists(dire):
