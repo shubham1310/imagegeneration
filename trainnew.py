@@ -25,22 +25,21 @@ parser.add_argument('--workers', type=int, default=4, help='number of data loadi
 parser.add_argument('--type', type=str, default='male', help='male/female')
 parser.add_argument('--batchsize', type=int, default=16, help='input batch size')
 parser.add_argument('--imagesize', type=int, default=200, help='the low resolution image size')
-parser.add_argument('--upSampling', type=int, default=1, help='low to high resolution scaling factor')
 parser.add_argument('--nEpochs', type=int, default=25, help='number of epochs to train for')
 parser.add_argument('--gEpochs', type=int, default=2, help='number of epochs to pre-train the generator for')
 parser.add_argument('--lrG', type=float, default=0.0001, help='learning rate for generator')
 parser.add_argument('--lrD', type=float, default=0.0001, help='learning rate for discriminator')
-# parser.add_argument('--lrDp', type=float, default=0.0001, help='learning rate for patch discriminator')
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--netG', type=str, default='', help="path to netG (to continue training)")
 parser.add_argument('--netD', type=str, default='', help="path to netD (to continue training)")
 parser.add_argument('--contloss', type=str, default='l2', help="l2/l1")
-# parser.add_argument('--netDp', type=str, default='', help="path to netDp (to continue training)")
 parser.add_argument('--out', type=str, default='checkpoints', help='folder to output model checkpoints')
-# parser.add_argument('--patchH', type=int, default=25, help='patch height')
-# parser.add_argument('--patchW', type=int, default=25, help='patch width')
 parser.add_argument('--disstep', type=int, default=1, help='patch width')
 parser.add_argument('--losfac', type=float, default=1.0, help='factor to multiply the content loss of Generator')
+# parser.add_argument('--lrDp', type=float, default=0.0001, help='learning rate for patch discriminator')
+# parser.add_argument('--netDp', type=str, default='', help="path to netDp (to continue training)")
+# parser.add_argument('--patchH', type=int, default=25, help='patch height')
+# parser.add_argument('--patchW', type=int, default=25, help='patch width')
 
 opt = parser.parse_args()
 print(opt)
@@ -53,29 +52,14 @@ except OSError:
 if torch.cuda.is_available() and not opt.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
-transform = transforms.Compose([transforms.Resize((opt.imagesize*opt.upSampling,opt.imagesize*opt.upSampling)), 
-                                transforms.ToTensor()]) #opt.upSampling
 
 normalize = transforms.Normalize(mean = [0.485, 0.456, 0.406],
                                 std = [0.229, 0.224, 0.225])
 
-scaleandnorm = transforms.Compose([transforms.ToPILImage(),
-                            transforms.Resize(opt.imagesize),
-                            transforms.ToTensor(),
-                            transforms.Normalize(mean = [0.485, 0.456, 0.406],
-                                                std = [0.229, 0.224, 0.225])
-                            ])
+transform = transforms.Compose([transforms.Resize((opt.imagesize,opt.imagesize)), 
+                                transforms.ToTensor(),
+                                normalize,]) #opt.upSampling
 
-scale = transforms.Compose([transforms.ToPILImage(),
-                            transforms.Resize(opt.imagesize),
-                            transforms.ToTensor()
-                            ])
-
-
-backtrans= transforms.Compose([transforms.Normalize(mean = [-2.118, -2.036, -1.804], #Equivalent to un-normalizing ImageNet (for correct visualization)
-                            std = [4.367, 4.464, 4.444]),
-                            transforms.ToPILImage(),
-                            transforms.Resize(opt.imagesize)])
 
 if opt.type=='male':
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'gen') ,
@@ -96,7 +80,7 @@ dataloaderreal = torch.utils.data.DataLoader(datasetreal, batch_size=opt.batchsi
                                          shuffle=True, num_workers=int(opt.workers))
 
 
-netG = Generator(6, opt.upSampling) 
+netG = Generator(6) 
 netD = Discriminator()
 # netDp = patchDiscriminator(opt.patchH,opt.patchW)
 
@@ -111,22 +95,21 @@ else:
     content_criterion = nn.L1Loss()
 
 adversarial_criterion = nn.BCELoss()
-
 target_real = Variable(torch.ones(opt.batchsize,1))
 target_fake = Variable(torch.zeros(opt.batchsize,1))
 # target_realpatch = Variable(torch.ones(opt.batchsize,opt.patchW*opt.patchH))
 # target_fakepatch = Variable(torch.zeros(opt.batchsize,opt.patchW*opt.patchH))
 
 # if gpu is to be used
-if opt.cuda:
-    netG.cuda()
-    netG = torch.nn.DataParallel(netG)
-    netD.cuda()
-    netD = torch.nn.DataParallel(netD)
-    content_criterion.cuda()
-    adversarial_criterion.cuda()
-    target_real = target_real.cuda()
-    target_fake = target_fake.cuda()
+# if opt.cuda:
+netG.cuda()
+netG = torch.nn.DataParallel(netG)
+netD.cuda()
+netD = torch.nn.DataParallel(netD)
+content_criterion.cuda()
+adversarial_criterion.cuda()
+target_real = target_real.cuda()
+target_fake = target_fake.cuda()
     # target_fakepatch = target_fakepatch.cuda()
     # target_realpatch = target_realpatch.cuda()
     # netDp.cuda()
@@ -157,9 +140,9 @@ if not os.path.exists(dire):
     os.makedirs(dire)
 
 inputsG = torch.FloatTensor(opt.batchsize, 3, opt.imagesize, opt.imagesize)
-# inputsGmask = torch.FloatTensor(opt.batchsize, 3, opt.imagesize*opt.upSampling, opt.imagesize*opt.upSampling)
-inputsGimg = torch.FloatTensor(opt.batchsize, 3, opt.imagesize*opt.upSampling, opt.imagesize*opt.upSampling)
-inputsGreal = torch.FloatTensor(opt.batchsize, 3, opt.imagesize*opt.upSampling, opt.imagesize*opt.upSampling)
+# inputsGmask = torch.FloatTensor(opt.batchsize, 3, opt.imagesize, opt.imagesize)
+inputsGimg = torch.FloatTensor(opt.batchsize, 3, opt.imagesize, opt.imagesize)
+inputsGreal = torch.FloatTensor(opt.batchsize, 3, opt.imagesize, opt.imagesize)
 
 count =0
 # Pre-train generator
@@ -169,20 +152,16 @@ for epoch in range(opt.gEpochs):
         # Generate data
         inputs = data
 
-        if not(int(inputs.size()[0]) == opt.batchsize):
-            continue
-        # Downsample images to low resolution
+        # if not(int(inputs.size()[0]) == opt.batchsize):
+        #     continue
+        # Downsample images to low resolution3
         for j in range(opt.batchsize):
-            inputsG[j] = scaleandnorm(inputs[j])
-            inputsGimg[j] = normalize(inputs[j])
+            inputsG[j] = inputs[j]
+            inputsGimg[j] = inputs[j]
 
         # Generate real and fake inputs
-        if opt.cuda:
-            orig_imag = Variable(inputsGimg.cuda())
-            outputG = netG(Variable(inputsG).cuda())
-        else:
-            orig_imag = Variable(inputsGimg)
-            outputG = netG(Variable(inputsG))
+        orig_imag = Variable(inputsGimg.cuda())
+        outputG = netG(Variable(inputsG).cuda())
 
         ######### Train generator #########
         netG.zero_grad()
@@ -193,13 +172,17 @@ for epoch in range(opt.gEpochs):
         optimG.step()
 
         # Status and display
-        if i%50==0:
+        if i%5==0:
+            # print(orig_imag.data)
+            # print(outputG.data)
             print('[%d/%d][%d/%d] Loss_G: %.4f'% (epoch, opt.gEpochs, i, len(dataloaderreal), lossG_content.data[0],))
             count= visualizer.show(orig_imag.cpu().data, outputG.cpu().data, count, str(opt.out))
 
     log_value('G_pixel_loss', lossG_content.data[0], epoch)
     torch.save(netG.state_dict(), '%s/netG_pretrain_%d.pth' % (opt.out, epoch))
 
+while 1:
+    pass
 
 print 'Adversarial training'
 lenreal = len(dataloaderreal)
@@ -227,17 +210,13 @@ for epoch in range(opt.nEpochs):
             continue
 
         for j in range(opt.batchsize):
-            inputsG[j] = scaleandnorm(inputs[j])
-            inputsGimg[j] = normalize(inputs[j])
+            inputsG[j] = inputs[j]
+            inputsGimg[j] = inputs[j]
 
         # Generate real and fake inputs
-        if opt.cuda:
-            orig_imag = Variable(inputsGimg.cuda())
-            outputG = netG(Variable(inputsG).cuda())
-        else:
-            orig_imag = Variable(inputsGimg)
-            outputG = netG(Variable(inputsG))
-
+        # if opt.cuda:
+        orig_imag = Variable(inputsGimg.cuda())
+        outputG = netG(Variable(inputsG).cuda())
 
         gcount+=1
         ######### Train generator #########
@@ -307,10 +286,8 @@ for epoch in range(opt.nEpochs):
             for k in range(opt.batchsize):
                 inputsGreal[k] = normalize(inputsreal[k])
 
-            if opt.cuda:
-                inputsDreal = Variable(inputsGreal.cuda())
-            else:
-                inputsDreal = Variable(inputsGreal)
+            # if opt.cuda:
+            inputsDreal = Variable(inputsGreal.cuda())
 
             outputsre = netD(inputsDreal)
             Dreal = outputsre.data.mean()
@@ -366,3 +343,22 @@ for epoch in range(opt.nEpochs):
     torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.out, epoch))
     torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.out, epoch))
     # torch.save(netDp.state_dict(), '%s/netDp_epoch_%d.pth' % (opt.out, epoch))
+
+
+# scaleandnorm = transforms.Compose([transforms.ToPILImage(),
+#                             transforms.Resize(opt.imagesize),
+#                             transforms.ToTensor(),
+#                             transforms.Normalize(mean = [0.485, 0.456, 0.406],
+#                                                 std = [0.229, 0.224, 0.225])
+#                             ])
+
+# scale = transforms.Compose([transforms.ToPILImage(),
+#                             transforms.Resize(opt.imagesize),
+#                             transforms.ToTensor()
+#                             ])
+
+
+# backtrans= transforms.Compose([transforms.Normalize(mean = [-2.118, -2.036, -1.804], #Equivalent to un-normalizing ImageNet (for correct visualization)
+#                             std = [4.367, 4.464, 4.444]),
+#                             transforms.ToPILImage(),
+#                             transforms.Resize(opt.imagesize)])

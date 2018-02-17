@@ -35,7 +35,7 @@ class Visualizer2:
         self.fake_hr_image_ph = None
 
     def show(self, inputsG, inputstrans,count,name):
-        for j in range(2):
+        for j in range(5):
             i = random.randint(0, inputsG.size(0) -1)
             lr_image = self.transform(inputsG[i])
             transformimage = self.transform(inputstrans[i])
