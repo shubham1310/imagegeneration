@@ -152,8 +152,8 @@ for epoch in range(opt.gEpochs):
         # Generate data
         inputs = data
 
-        # if not(int(inputs.size()[0]) == opt.batchsize):
-        #     continue
+        if not(int(inputs.size()[0]) == opt.batchsize):
+            continue
         # Downsample images to low resolution3
         for j in range(opt.batchsize):
             inputsG[j] = inputs[j]
