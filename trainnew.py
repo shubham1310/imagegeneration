@@ -22,7 +22,7 @@ from utilsnew import Visualizer2, SingleImage
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataroot', type=str, default='../Main/Img/', help='path to dataset')
 parser.add_argument('--workers', type=int, default=4, help='number of data loading workers')
-parser.add_argument('--type', type=str, default='male', help='male/female')
+parser.add_argument('--type', type=str, default='male', help='male/female/test')
 parser.add_argument('--batchsize', type=int, default=16, help='input batch size')
 parser.add_argument('--imagesize', type=int, default=200, help='the low resolution image size')
 parser.add_argument('--nEpochs', type=int, default=25, help='number of epochs to train for')
@@ -65,6 +65,11 @@ if opt.type=='male':
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'gen') ,
                                     transform=transform)
     datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'origmale') ,
+                                    transform=transform)
+elif opt.type=='test':
+    datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'test') ,
+                                    transform=transform)
+    datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'test') ,
                                     transform=transform)
 else:
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'fegen') ,
