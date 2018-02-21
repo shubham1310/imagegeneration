@@ -85,7 +85,7 @@ dataloaderreal = torch.utils.data.DataLoader(datasetreal, batch_size=opt.batchsi
                                          shuffle=True, num_workers=int(opt.workers))
 
 
-netG = Generator(6) 
+netG = Generator() 
 netD = Discriminator()
 # netDp = patchDiscriminator(opt.patchH,opt.patchW)
 
@@ -182,7 +182,7 @@ for epoch in range(opt.gEpochs):
             # print(outputG.data)
             print('[%d/%d][%d/%d] Loss_G: %.4f'% (epoch, opt.gEpochs, i, len(dataloaderreal), lossG_content.data[0],))
             count= visualizer.show(orig_imag.cpu().data, outputG.cpu().data, count, str(opt.out))
-
+    
     log_value('G_pixel_loss', lossG_content.data[0], epoch)
     torch.save(netG.state_dict(), '%s/netG_pretrain_%d.pth' % (opt.out, epoch))
 

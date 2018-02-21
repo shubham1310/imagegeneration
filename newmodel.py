@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+from collections import OrderedDict
 
 
 class FeatureExtractor(nn.Module):
@@ -16,47 +17,69 @@ class FeatureExtractor(nn.Module):
 
     def forward(self, x):
         return self.features(x)
+        
+class ResnetBlock(nn.Module):
 
-class residualBlock(nn.Module):
-    def __init__(self, in_channels=64, k=3, n=64, s=1):
-        super(residualBlock, self).__init__()
-
-        self.conv1 = nn.Conv2d(in_channels, n, k, stride=s, padding=1)
-        self.bn1 = nn.BatchNorm2d(n)
-        self.conv2 = nn.Conv2d(n, n, k, stride=s, padding=1)
-        self.bn2 = nn.BatchNorm2d(n)
+    def __init__(self, inplanes, planes, stride=1):
+        super(ResnetBlock, self).__init__()
+        self.conv1 = conv3x3(inplanes, planes, stride)
+        # self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = conv3x3(planes, planes)
+        # self.bn2 = nn.BatchNorm2d(planes)
+        # self.downsample = downsample
+        self.stride = stride
 
     def forward(self, x):
-        y =  F.relu(self.bn1(self.conv1(x)))
-        return self.bn2(self.conv2(y)) + x
+        residual = x
+
+        out = self.conv1(x)
+        # out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        # out = self.bn2(out)
+
+        # if self.downsample is not None:
+        #     residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
+
+
+def conv3x3(in_planes, out_planes, stride=1):
+    """3x3 convolution with padding"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
 
 
 class Generator(nn.Module):
-    def __init__(self, n_residual_blocks):
+    def __init__(self):
         super(Generator, self).__init__()
-        self.n_residual_blocks = n_residual_blocks
-        # self.upsample_factor = upsample_factor
+        # # like 55x35 img network from paper
+        # num_resnet_blocks = 4
+        # self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        # self.resnet_blocks = nn.Sequential(OrderedDict([('block%d' % (i + 1), ResnetBlock(64, 64))
+        #                                                 for i in range(num_resnet_blocks)]))
+        # self.conv2 = nn.Conv2d(64, 1, kernel_size=1, stride=1, padding=0, bias=False)
 
-        self.conv1 = nn.Conv2d(3, 64, 9, stride=1, padding=4)
-
-        for i in range(self.n_residual_blocks):
-            self.add_module('residual_block' + str(i+1), residualBlock())
-
-        self.conv2 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
-        self.bn2 = nn.BatchNorm2d(64)
-
-        self.conv3 = nn.Conv2d(64, 3, 9, stride=1, padding=4)
+        # like 224x224 img network from paper
+        num_resnet_blocks = 10
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=1, padding=3, bias=False)
+        self.resnet_blocks = nn.Sequential(OrderedDict([('block%d' % (i + 1), ResnetBlock(64, 64))
+                                                        for i in range(num_resnet_blocks)]))
+        self.conv2 = nn.Conv2d(64, 3, kernel_size=1, stride=1, padding=0, bias=False)
 
     def forward(self, x):
-        x =  F.relu(self.conv1(x))
+        x = self.conv1(x)
+        x = F.relu(x)
+        x = self.resnet_blocks(x)
+        x = self.conv2(x)
+        x = F.tanh(x)  # not mentioned in paper, but ensures output in [-1, 1]
+        return x
 
-        y = x.clone()
-        for i in range(self.n_residual_blocks):
-            y = self.__getattr__('residual_block' + str(i+1))(y)
-
-        x = self.bn2(self.conv2(y)) + x
-
-        return self.conv3(x)
 
 class Discriminator(nn.Module):
     def __init__(self):
@@ -152,6 +175,46 @@ class patchDiscriminator(nn.Module):
 
         return F.sigmoid(x)
 
+# class residualBlock(nn.Module):
+#     def __init__(self, in_channels=64, k=3, n=64, s=1):
+#         super(residualBlock, self).__init__()
+
+#         self.conv1 = nn.Conv2d(in_channels, n, k, stride=s, padding=1)
+#         self.bn1 = nn.BatchNorm2d(n)
+#         self.conv2 = nn.Conv2d(n, n, k, stride=s, padding=1)
+#         self.bn2 = nn.BatchNorm2d(n)
+
+#     def forward(self, x):
+#         y =  F.relu(self.bn1(self.conv1(x)))
+#         return self.bn2(self.conv2(y)) + x
+
+
+# class Generator(nn.Module):
+#     def __init__(self, n_residual_blocks):
+#         super(Generator, self).__init__()
+#         self.n_residual_blocks = n_residual_blocks
+#         # self.upsample_factor = upsample_factor
+
+#         self.conv1 = nn.Conv2d(3, 64, 9, stride=1, padding=4)
+
+#         for i in range(self.n_residual_blocks):
+#             self.add_module('residual_block' + str(i+1), residualBlock())
+
+#         self.conv2 = nn.Conv2d(64, 64, 3, stride=1, padding=1)
+#         self.bn2 = nn.BatchNorm2d(64)
+
+#         self.conv3 = nn.Conv2d(64, 3, 9, stride=1, padding=4)
+
+#     def forward(self, x):
+#         x =  F.relu(self.conv1(x))
+
+#         y = x.clone()
+#         for i in range(self.n_residual_blocks):
+#             y = self.__getattr__('residual_block' + str(i+1))(y)
+
+#         x = self.bn2(self.conv2(y)) + x
+
+#         return self.conv3(x)
 
 # class upsampleBlock(nn.Module):
 #     # Implements resize-convolution
