@@ -159,7 +159,7 @@ for epoch in range(opt.gEpochs):
 
         if not(int(inputs.size()[0]) == opt.batchsize):
             continue
-        # Downsample images to low resolution3
+
         for j in range(opt.batchsize):
             inputsG[j] = inputs[j]
             inputsGimg[j] = inputs[j]
@@ -181,7 +181,8 @@ for epoch in range(opt.gEpochs):
             # print(orig_imag.data)
             # print(outputG.data)
             print('[%d/%d][%d/%d] Loss_G: %.4f'% (epoch, opt.gEpochs, i, len(dataloaderreal), lossG_content.data[0],))
-            count= visualizer.show(orig_imag.cpu().data, outputG.cpu().data, count, str(opt.out))
+            for masa in range(5):
+                count= visualizer.show(orig_imag.cpu().data, outputG.cpu().data, count, str(opt.out))
     
     log_value('G_pixel_loss', lossG_content.data[0], epoch)
     torch.save(netG.state_dict(), '%s/netG_pretrain_%d.pth' % (opt.out, epoch))
@@ -219,7 +220,6 @@ for epoch in range(opt.nEpochs):
             inputsGimg[j] = inputs[j]
 
         # Generate real and fake inputs
-        # if opt.cuda:
         orig_imag = Variable(inputsGimg.cuda())
         outputG = netG(Variable(inputsG).cuda())
 
@@ -328,7 +328,8 @@ for epoch in range(opt.nEpochs):
                   % (epoch, opt.nEpochs, i, len(dataloaderreal), lossG_content.data[0], lossG_adversarial.data[0],
                       lossDreal.data[0], lossD.data[0]-lossDreal.data[0], lossD.data[0],lossG_total.data[0]))
         if i%200==0:
-            visualcount = visualizer.show(inputsG, outputG.cpu().data,visualcount,str(opt.out))
+            for masa in range(5):
+                visualcount = visualizer.show(inputsG, outputG.cpu().data,visualcount,str(opt.out))
             log_value('D_realloss', mean_discriminator_realloss/dcount, logcount)
             log_value('D_fakeloss',(mean_discriminator_loss-mean_discriminator_realloss)/dcount, logcount)
             log_value('D_totalloss', mean_discriminator_loss/dcount, logcount)
@@ -348,22 +349,3 @@ for epoch in range(opt.nEpochs):
     torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.out, epoch))
     torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.out, epoch))
     # torch.save(netDp.state_dict(), '%s/netDp_epoch_%d.pth' % (opt.out, epoch))
-
-
-# scaleandnorm = transforms.Compose([transforms.ToPILImage(),
-#                             transforms.Resize(opt.imagesize),
-#                             transforms.ToTensor(),
-#                             transforms.Normalize(mean = [0.485, 0.456, 0.406],
-#                                                 std = [0.229, 0.224, 0.225])
-#                             ])
-
-# scale = transforms.Compose([transforms.ToPILImage(),
-#                             transforms.Resize(opt.imagesize),
-#                             transforms.ToTensor()
-#                             ])
-
-
-# backtrans= transforms.Compose([transforms.Normalize(mean = [-2.118, -2.036, -1.804], #Equivalent to un-normalizing ImageNet (for correct visualization)
-#                             std = [4.367, 4.464, 4.444]),
-#                             transforms.ToPILImage(),
-#                             transforms.Resize(opt.imagesize)])
