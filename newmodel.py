@@ -77,7 +77,7 @@ class Generator(nn.Module):
         x = F.relu(x)
         x = self.resnet_blocks(x)
         x = self.conv2(x)
-        x = F.tanh(x)  # not mentioned in paper, but ensures output in [-1, 1]
+        # x = F.tanh(x)  # not mentioned in paper, but ensures output in [-1, 1]
         return x
 
 
