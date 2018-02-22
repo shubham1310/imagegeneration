@@ -1,32 +1,17 @@
-# -*- coding: utf-8 -*-
-"""Implements some utils
-
-TODO:
-"""
-from torch.utils.data import DataLoader,Dataset
-import numpy as np
 import random
 from PIL import Image
-import torch
 import os
-import itertools
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
-
-import argparse
-import random
-
 from torchvision import transforms
-from torchvision.utils import make_grid
-import matplotlib.pyplot as plt
 
 class Visualizer2:
     def __init__(self, image_size=(100,100)):
-        self.transform = transforms.Compose([transforms.Normalize(mean = [-2.118, -2.036, -1.804], #Equivalent to un-normalizing ImageNet (for correct visualization)
-                                            std = [4.367, 4.464, 4.444]),
-                                            transforms.ToPILImage(),
-                                            transforms.Resize(image_size)])
-
+        self.transform = transforms.Compose(
+                            [transforms.Normalize(mean = [-2.118, -2.036, -1.804], #Equivalent to un-normalizing ImageNet (for correct visualization)
+                            std = [4.367, 4.464, 4.444]),
+                            transforms.ToPILImage(),
+                            transforms.Resize(image_size)]
+                            )
         self.step = 0
         self.figure, (self.lr_plot, self.fake_plot) = plt.subplots(1,2)
         self.figure.show()
@@ -39,7 +24,7 @@ class Visualizer2:
         self.figure.savefig('./resultimages/' +name +'/'+ str(count)+'.png')
         return count + 1
 
-class SingleImage(Dataset):
+class SingleImage():
     
     def __init__(self, imageFolder, transform=None):
         self.imageFolder = imageFolder 
