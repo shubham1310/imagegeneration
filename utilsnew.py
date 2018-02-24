@@ -21,6 +21,20 @@ class Visualizer2:
         self.lr_plot.imshow(self.transform(inputsG[i]))
         self.fake_plot.imshow(self.transform(inputstrans[i]))
         self.figure.canvas.draw()
+
+        images = [self.transform(inputsG[i]), self.transform(inputstrans[i])]
+        widths, heights = zip(*(i.size for i in images))
+        total_width = sum(widths)
+        max_height = max(heights)
+
+        new_im = Image.new('RGB', (total_width, max_height))
+
+        x_offset = 0
+        for im in images:
+          new_im.paste(im, (x_offset,0))
+          x_offset += im.size[0]
+
+        new_im.save('./resultimages/' +name +'/'+ str(count)+'.jpg')
         self.figure.savefig('./resultimages/' +name +'/'+ str(count)+'.png')
         return count + 1
 

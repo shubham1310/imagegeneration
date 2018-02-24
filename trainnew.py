@@ -1,7 +1,7 @@
 import matplotlib
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 matplotlib.use('Agg')
-
+from copy import deepcopy
 import argparse
 import os
 import numpy as np
@@ -56,26 +56,31 @@ if torch.cuda.is_available() and not opt.cuda:
 normalize = transforms.Normalize(mean = [0.485, 0.456, 0.406],
                                 std = [0.229, 0.224, 0.225])
 
-transform = transforms.Compose([transforms.Resize((opt.imagesize,opt.imagesize)), 
+trans = transforms.Compose([transforms.Resize((opt.imagesize,opt.imagesize)), 
                                 transforms.ToTensor(),
                                 normalize,]) #opt.upSampling
 
+revtransform = transforms.Compose(
+                [transforms.Normalize(mean = [-2.118, -2.036, -1.804], #Equivalent to un-normalizing ImageNet (for correct visualization)
+                                    std = [4.367, 4.464, 4.444]),
+                transforms.ToPILImage(),]
+                )
 
 if opt.type=='male':
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'gen') ,
-                                    transform=transform)
+                                    transform=trans)
     datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'origmale') ,
-                                    transform=transform)
+                                    transform=trans)
 elif opt.type=='test':
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'test') ,
-                                    transform=transform)
+                                    transform=trans)
     datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'test') ,
-                                    transform=transform)
+                                    transform=trans)
 else:
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'fegen') ,
-                                    transform=transform)
+                                    transform=trans)
     datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'origfemale') ,
-                                    transform=transform)
+                                    transform=trans)
 
 dataloaderfake = torch.utils.data.DataLoader(datasetfake, batch_size=opt.batchsize,
                                          shuffle=True, num_workers=int(opt.workers))
@@ -105,8 +110,6 @@ target_fake = Variable(torch.zeros(opt.batchsize,1))
 # target_realpatch = Variable(torch.ones(opt.batchsize,opt.patchW*opt.patchH))
 # target_fakepatch = Variable(torch.zeros(opt.batchsize,opt.patchW*opt.patchH))
 
-# if gpu is to be used
-# if opt.cuda:
 netG.cuda()
 netG = torch.nn.DataParallel(netG)
 netD.cuda()
@@ -115,11 +118,11 @@ content_criterion.cuda()
 adversarial_criterion.cuda()
 target_real = target_real.cuda()
 target_fake = target_fake.cuda()
-    # target_fakepatch = target_fakepatch.cuda()
-    # target_realpatch = target_realpatch.cuda()
-    # netDp.cuda()
-    # netDp = torch.nn.DataParallel(netDp)
-    # feature_extractor.cuda()
+# target_fakepatch = target_fakepatch.cuda()
+# target_realpatch = target_realpatch.cuda()
+# netDp.cuda()
+# netDp = torch.nn.DataParallel(netDp)
+# feature_extractor.cuda()
 
 
 if opt.netG != '':
@@ -145,7 +148,6 @@ if not os.path.exists(dire):
     os.makedirs(dire)
 
 inputsG = torch.FloatTensor(opt.batchsize, 3, opt.imagesize, opt.imagesize)
-# inputsGmask = torch.FloatTensor(opt.batchsize, 3, opt.imagesize, opt.imagesize)
 inputsGimg = torch.FloatTensor(opt.batchsize, 3, opt.imagesize, opt.imagesize)
 inputsGreal = torch.FloatTensor(opt.batchsize, 3, opt.imagesize, opt.imagesize)
 
@@ -156,17 +158,27 @@ for epoch in range(opt.gEpochs):
     for i, data in enumerate(dataloaderreal):
         # Generate data
         inputs = data
+        fig=plt.figure()
+        fig=plt.imshow(revtransform(inputs[0]))
+        fig.figure.savefig('./resultimages/input1_'+str(count)+'.png')
 
         if not(int(inputs.size()[0]) == opt.batchsize):
             continue
 
         for j in range(opt.batchsize):
-            inputsG[j] = inputs[j]
-            inputsGimg[j] = inputs[j]
+            inputsG[j] = deepcopy(inputs[j])
+            inputsGimg[j] = deepcopy(inputs[j])
 
         # Generate real and fake inputs
         orig_imag = Variable(inputsGimg.cuda())
         outputG = netG(Variable(inputsG).cuda())
+
+        fig=plt.figure()
+        fig=plt.imshow(revtransform(orig_imag.cpu().data[0]))
+        fig.figure.savefig('./resultimages/input2_'+str(count)+'.png')
+        fig=plt.figure()
+        fig=plt.imshow(revtransform(outputG.cpu().data[0]))
+        fig.figure.savefig('./resultimages/output'+str(count)+'.png')
 
         ######### Train generator #########
         netG.zero_grad()
@@ -181,13 +193,11 @@ for epoch in range(opt.gEpochs):
             # print(orig_imag.data)
             # print(outputG.data)
             print('[%d/%d][%d/%d] Loss_G: %.4f'% (epoch, opt.gEpochs, i, len(dataloaderreal), lossG_content.data[0],))
-            count= visualizer.show(orig_imag.cpu().data, outputG.cpu().data, count, str(opt.out))
+            count= visualizer.show(orig_imag.cpu().data, inputsGimg , count, str(opt.out))#outputG.cpu().data
     
     log_value('G_pixel_loss', lossG_content.data[0], epoch)
     torch.save(netG.state_dict(), '%s/netG_pretrain_%d.pth' % (opt.out, epoch))
 
-while 1:
-    pass
 
 print 'Adversarial training'
 lenreal = len(dataloaderreal)

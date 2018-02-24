@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-"""Implements SRGAN models: https://arxiv.org/abs/1609.04802
-TODO:
-"""
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -28,24 +23,19 @@ class ResnetBlock(nn.Module):
         self.conv2 = conv3x3(planes, planes)
         self.bn2 = nn.BatchNorm2d(planes)
         # self.downsample = downsample
-        self.stride = stride
+        # self.stride = stride
 
     def forward(self, x):
         residual = x
-
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
-
         out = self.conv2(out)
         out = self.bn2(out)
-
         # if self.downsample is not None:
         #     residual = self.downsample(x)
-
         out += residual
         out = self.relu(out)
-
         return out
 
 
