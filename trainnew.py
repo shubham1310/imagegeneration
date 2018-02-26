@@ -1,6 +1,6 @@
 import matplotlib
-import matplotlib.pyplot as plt
 matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from copy import deepcopy
 import argparse
 import os
@@ -158,9 +158,9 @@ for epoch in range(opt.gEpochs):
     for i, data in enumerate(dataloaderreal):
         # Generate data
         inputs = data
-        fig=plt.figure()
-        fig=plt.imshow(revtransform(inputs[0]))
-        fig.figure.savefig('./resultimages/input1_'+str(count)+'.png')
+        # fig=plt.figure()
+        # fig=plt.imshow(revtransform(inputs[0]))
+        # fig.figure.savefig('./resultimages/input1_'+str(count)+'.png')
 
         if not(int(inputs.size()[0]) == opt.batchsize):
             continue
@@ -173,12 +173,12 @@ for epoch in range(opt.gEpochs):
         orig_imag = Variable(inputsGimg.cuda())
         outputG = netG(Variable(inputsG).cuda())
 
-        fig=plt.figure()
-        fig=plt.imshow(revtransform(orig_imag.cpu().data[0]))
-        fig.figure.savefig('./resultimages/input2_'+str(count)+'.png')
-        fig=plt.figure()
-        fig=plt.imshow(revtransform(outputG.cpu().data[0]))
-        fig.figure.savefig('./resultimages/output'+str(count)+'.png')
+        # fig=plt.figure()
+        # fig=plt.imshow(revtransform(orig_imag.cpu().data[0]))
+        # fig.figure.savefig('./resultimages/input2_'+str(count)+'.png')
+        # fig=plt.figure()
+        # fig=plt.imshow(revtransform(outputG.cpu().data[0]))
+        # fig.figure.savefig('./resultimages/output'+str(count)+'.png')
 
         ######### Train generator #########
         netG.zero_grad()
