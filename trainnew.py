@@ -160,7 +160,13 @@ for epoch in range(opt.gEpochs):
         inputs = data
         # fig=plt.figure()
         # fig=plt.imshow(revtransform(inputs[0]))
-        # fig.figure.savefig('./resultimages/input1_'+str(count)+'.png')
+        # fig.figure.savefig('./input1_'+str(count)+'.png')
+        # plt.figure()
+        # plt.imshow(np.array(revtransform(inputs[0])))
+        # plt.show()
+        # plt.savefig('./input1_'+str(count)+'.jpg')
+        # plt.close()
+        # print(inputs[0].shape)
 
         if not(int(inputs.size()[0]) == opt.batchsize):
             continue
@@ -175,10 +181,22 @@ for epoch in range(opt.gEpochs):
 
         # fig=plt.figure()
         # fig=plt.imshow(revtransform(orig_imag.cpu().data[0]))
-        # fig.figure.savefig('./resultimages/input2_'+str(count)+'.png')
+        # fig.figure.savefig('./input2_'+str(count)+'.png')
+
+        # num_same = orig_imag.cpu().data[0].eq(inputs[0]).sum()
+        # num_total = inputs[0].numel()
+        # print(num_same, num_total)
+
+        # plt.figure()
+        # plt.imshow(np.array(revtransform(inputs[0])))#orig_imag.cpu().data[0]
+        # plt.show()
+        # plt.savefig('./input2_'+str(count)+'.jpg')
+        # plt.close()
+        # print(orig_imag.cpu().data[0].numpy().shape)
+        
         # fig=plt.figure()
         # fig=plt.imshow(revtransform(outputG.cpu().data[0]))
-        # fig.figure.savefig('./resultimages/output'+str(count)+'.png')
+        # fig.figure.savefig('./output'+str(count)+'.png')
 
         ######### Train generator #########
         netG.zero_grad()
@@ -193,7 +211,7 @@ for epoch in range(opt.gEpochs):
             # print(orig_imag.data)
             # print(outputG.data)
             print('[%d/%d][%d/%d] Loss_G: %.4f'% (epoch, opt.gEpochs, i, len(dataloaderreal), lossG_content.data[0],))
-            count= visualizer.show(orig_imag.cpu().data, inputsGimg , count, str(opt.out))#outputG.cpu().data
+            count= visualizer.show(orig_imag.cpu().data, inputsGimg , count, str(opt.out)+'/pretrain')#outputG.cpu().data
     
     log_value('G_pixel_loss', lossG_content.data[0], epoch)
     torch.save(netG.state_dict(), '%s/netG_pretrain_%d.pth' % (opt.out, epoch))
@@ -337,7 +355,7 @@ for epoch in range(opt.nEpochs):
                   % (epoch, opt.nEpochs, i, len(dataloaderreal), lossG_content.data[0], lossG_adversarial.data[0],
                       lossDreal.data[0], lossD.data[0]-lossDreal.data[0], lossD.data[0],lossG_total.data[0]))
         if i%200==0:
-            visualcount = visualizer.show(inputsG, outputG.cpu().data,visualcount,str(opt.out))
+            visualcount = visualizer.show(inputsG, outputG.cpu().data,visualcount,str(opt.out)+'/combtrain')
             log_value('D_realloss', mean_discriminator_realloss/dcount, logcount)
             log_value('D_fakeloss',(mean_discriminator_loss-mean_discriminator_realloss)/dcount, logcount)
             log_value('D_totalloss', mean_discriminator_loss/dcount, logcount)
