@@ -67,7 +67,7 @@ revtransform = transforms.Compose(
                 )
 
 if opt.type=='male':
-    datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'gen') ,
+    datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'newgen') ,
                                     transform=trans)
     datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'origmale') ,
                                     transform=trans)
@@ -217,6 +217,9 @@ for epoch in range(opt.gEpochs):
     torch.save(netG.state_dict(), '%s/netG_pretrain_%d.pth' % (opt.out, epoch))
 
 
+
+siz =opt.imagesize
+
 print 'Adversarial training'
 lenreal = len(dataloaderreal)
 count=0
@@ -243,8 +246,8 @@ for epoch in range(opt.nEpochs):
             continue
 
         for j in range(opt.batchsize):
-            inputsG[j] = inputs[j]
-            inputsGimg[j] = inputs[j]
+            inputsG[j] = deepcopy(inputs[j][:,:siz,:])
+            inputsGimg[j] = deepcopy(inputs[j][:,:siz,:])
 
         # Generate real and fake inputs
         orig_imag = Variable(inputsGimg.cuda())
@@ -318,7 +321,6 @@ for epoch in range(opt.nEpochs):
             for k in range(opt.batchsize):
                 inputsGreal[k] = normalize(inputsreal[k])
 
-            # if opt.cuda:
             inputsDreal = Variable(inputsGreal.cuda())
 
             outputsre = netD(inputsDreal)
