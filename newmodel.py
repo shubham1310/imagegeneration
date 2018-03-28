@@ -60,7 +60,9 @@ class Generator(nn.Module):
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=1, padding=3, bias=False)
         self.resnet_blocks = nn.Sequential(OrderedDict([('block%d' % (i + 1), ResnetBlock(64, 64))
                                                         for i in range(num_resnet_blocks)]))
-        self.conv2 = nn.Conv2d(64, 3, kernel_size=1, stride=1, padding=0, bias=False)
+
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=1, stride=1, padding=0, bias=False)
+        self.conv3 = nn.Conv2d(64, 3, kernel_size=1, stride=1, padding=0, bias=False)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -68,7 +70,7 @@ class Generator(nn.Module):
         x = self.resnet_blocks(x)
         x = self.conv2(x)
         # x = F.tanh(x)  # not mentioned in paper, but ensures output in [-1, 1]
-        return x
+        return self.conv3(x)
 
 
 class Discriminator(nn.Module):
