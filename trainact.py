@@ -2,6 +2,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from copy import deepcopy
+import pdb
 import argparse
 import os
 import numpy as np
@@ -56,7 +57,11 @@ if torch.cuda.is_available() and not opt.cuda:
 normalize = transforms.Normalize(mean = [0.485, 0.456, 0.406],
                                 std = [0.229, 0.224, 0.225])
 
-trans = transforms.Compose([transforms.Resize((opt.imagesize,opt.imagesize)), 
+transreal = transforms.Compose([transforms.Resize((opt.imagesize,opt.imagesize)), 
+                                transforms.ToTensor(),
+                                normalize,]) #opt.upSampling
+
+transfake = transforms.Compose([transforms.Resize((opt.imagesize,2*opt.imagesize)), 
                                 transforms.ToTensor(),
                                 normalize,]) #opt.upSampling
 
@@ -68,19 +73,19 @@ revtransform = transforms.Compose(
 
 if opt.type=='male':
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'newgen') ,
-                                    transform=trans)
+                                    transform=transfake)
     datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'origmale') ,
-                                    transform=trans)
+                                    transform=transreal)
 elif opt.type=='test':
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'test') ,
-                                    transform=trans)
+                                    transform=transfake)
     datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'test') ,
-                                    transform=trans)
+                                    transform=transreal)
 else:
     datasetfake = SingleImage(imageFolder= os.path.join(opt.dataroot, 'fegen') ,
-                                    transform=trans)
+                                    transform=transfake)
     datasetreal = SingleImage(imageFolder= os.path.join(opt.dataroot, 'origfemale') ,
-                                    transform=trans)
+                                    transform=transreal)
 
 dataloaderfake = torch.utils.data.DataLoader(datasetfake, batch_size=opt.batchsize,
                                          shuffle=True, num_workers=int(opt.workers))
@@ -245,9 +250,18 @@ for epoch in range(opt.nEpochs):
         if not(int(inputs.size()[0]) == opt.batchsize):
             continue
 
+        # pdb.set_trace()
+        # print(inputs[0])
         for j in range(opt.batchsize):
-            inputsG[j] = deepcopy(inputs[j][:,:siz,:])
-            inputsGimg[j] = deepcopy(inputs[j][:,:siz,:])
+            inputsG[j] = deepcopy(inputs[j][:,:,:siz])
+            inputsGimg[j] = deepcopy(inputs[j][:,:,siz:])
+        # fig=plt.figure()
+        # fig=plt.imshow(revtransform(inputsG[0]))
+        # fig.figure.savefig('./pasted'+'.png')
+        # fig=plt.figure()
+        # fig=plt.imshow(revtransform(inputsGimg[0]))
+        # fig.figure.savefig('./real'+'.png')
+
 
         # Generate real and fake inputs
         orig_imag = Variable(inputsGimg.cuda())
@@ -352,11 +366,11 @@ for epoch in range(opt.nEpochs):
         # Status and display
         if i%50==0:
             # print("Average G_content: %.4f G_adversarial: %.4f  G_content/G_adversarial: %.4f"%(val1m/valcount,val2m/valcount,val/valcount))
-            print('[%d/%d][%d/%d] Dreal(x): %.4f D(G(z)): %.4f '% (epoch, opt.nEpochs, i, len(dataloaderreal), Dreal, D_fake ))
+            print('[%d/%d][%d/%d] Dreal(x): %.4f D(G(z)): %.4f '% (epoch, opt.nEpochs, i, len(dataloaderfake), Dreal, D_fake ))
             print('[%d/%d][%d/%d] Loss_G (Content/Advers): %.4f/%.4f  Loss_Dreal: %.4f Loss_Dfake: %.4f LossDtotal: %.4f  LossGtotal: %.4f'
-                  % (epoch, opt.nEpochs, i, len(dataloaderreal), lossG_content.data[0], lossG_adversarial.data[0],
+                  % (epoch, opt.nEpochs, i, len(dataloaderfake), lossG_content.data[0], lossG_adversarial.data[0],
                       lossDreal.data[0], lossD.data[0]-lossDreal.data[0], lossD.data[0],lossG_total.data[0]))
-        if i%200==0:
+        if i%2==0:
             visualcount = visualizer.show(inputsG, outputG.cpu().data,visualcount,str(opt.out)+'/combtrain')
             log_value('D_realloss', mean_discriminator_realloss/dcount, logcount)
             log_value('D_fakeloss',(mean_discriminator_loss-mean_discriminator_realloss)/dcount, logcount)

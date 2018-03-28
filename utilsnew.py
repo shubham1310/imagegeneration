@@ -34,7 +34,7 @@ class Visualizer2:
           new_im.paste(im, (x_offset,0))
           x_offset += im.size[0]
 
-        new_im.save('./resultimages/' +name + str(count)+'.jpg')
+        # new_im.save('./resultimages/' +name + str(count)+'.jpg')
         self.figure.savefig('./resultimages/' +name + str(count)+'.png')
         return count + 1
 
